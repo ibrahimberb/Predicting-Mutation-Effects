@@ -1,4 +1,5 @@
-from typing import List
+from dataclasses import dataclass
+from typing import List, Dict
 from .data_materials import DataMaterials
 from tqdm.notebook import tqdm
 from .machine_learning_utils import get_default_classifier
@@ -28,11 +29,12 @@ log_simple.handlers[:] = []
 log_simple.addHandler(handler_simple)
 log_simple.setLevel(logging.DEBUG)
 
+
 # ## i was here.
-# @dataclass  # fixme: namedtuple really necessary?
-# class AggregationMethods(namedtuple):
-#     occurance = 'occurrance'
-#     concordance = 'concordance'
+@dataclass
+class AggregationMethods:
+    OCCURRANCE = 'occurrance'
+    CONCORDANCE = 'concordance'
 
 
 class ShapFeatureSelector:
@@ -44,8 +46,10 @@ class ShapFeatureSelector:
 
         self.shap_values_train_list = None
 
+        self.aggregated_feature_selector = None
+
         self.n_features_to_selected_features_list = defaultdict(list)  # Dict[int, List[List[str]]]
-        self.n_features_to_combined_features = defaultdict(list)  # Dict[int, List[str]]
+        self.n_features_to_aggregated_features = None
 
     def load_shap_values(self, data_materials: DataMaterials):
         """Fitted on trainsets, not on all train data."""
@@ -77,13 +81,14 @@ class ShapFeatureSelector:
                 shap_values = self.shap_values_train_list[exp][1]
                 features_data = data_materials["Xs_train"][exp]
                 selected_features = self.get_selected_features_single_data(shap_values, features_data, top_n=top_n)
-                log_simple.debug(f"[Experiment {exp+1}] ")
+                log_simple.debug(f"Experiment {exp+1}")
                 print(f"{selected_features}\n")
                 self.n_features_to_selected_features_list[top_n].append(selected_features)
 
-    def combine_selected_features(self):
-        pass
-
+    def aggregate_selected_features(self, method):
+        self.aggregated_feature_selector = AggregatedFeatureSelector(self.n_features_to_selected_features_list, method)
+        self.aggregated_feature_selector.aggregate()
+        self.n_features_to_aggregated_features = self.aggregated_feature_selector.n_features_to_aggregated_features
 
     # def init_shap_feature_selector(self, data_materials: DataMaterials):
     #     self.load_shap_values(data_materials)
@@ -105,15 +110,29 @@ class ShapFeatureSelector:
         # self.append_top_n_features(data_materials)
 
 
+class AggregatedFeatureSelector:                  # fixme ↓
+    def __init__(self, n_features_to_selected_features_list: Dict[int, List[List[str]]], aggregation_method=None):
+        self.aggregation_method = aggregation_method
+        self.n_features_to_selected_features_list = n_features_to_selected_features_list
+        self.n_features_to_aggregated_features = None
+        self.n_features_to_selected_features_occurrences_counts = defaultdict(list)
 
-#
-#
-# class AggregatedFeatureSelector:                   # fixme
-#     def __init__(self, features_list: List[List], aggregation_method=None):
-#         self.aggregation_method = AggregationMethods.occurance
-#
-#
-#
-#     def aggregator(self):
-#         if self.aggregation_method == AggregationMethods.occurance:
-#
+    def aggregate(self):
+        if self.aggregation_method == AggregationMethods.OCCURRANCE:
+            self.n_features_to_aggregated_features = self.aggregate_occurrance()
+
+    def aggregate_occurrance(self) -> Dict[int, list]:
+        top_n_to_frequently_occurred_features = {}
+        for top_n, features_list in self.n_features_to_selected_features_list.items():
+            selected_features_to_occurrences = defaultdict(int)
+            for features in features_list:
+                for feature in features:
+                    selected_features_to_occurrences[feature] += 1
+
+            # Sorting the counts dictionary by value in desending order.
+            frequently_occurred_features = sorted(selected_features_to_occurrences,
+                                                  key=selected_features_to_occurrences.get, reverse=True)[:top_n]
+            top_n_to_frequently_occurred_features[top_n] = frequently_occurred_features
+            self.n_features_to_selected_features_occurrences_counts[top_n].append(selected_features_to_occurrences)
+
+        return top_n_to_frequently_occurred_features
