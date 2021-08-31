@@ -60,13 +60,15 @@ class DataMaterials(dict):
         self["ys_valid_random"].append(data_materials['y_valid_random'])
 
     def initialize_feature_selected_data_materials(self, n_top: int):
-        log.debug("Initialize feature selected data materials ..")
+        log.debug(f"Initialize feature selected data materials [n_top={n_top}]..")
         self[f"Xs_shap_{n_top}"] = []
-        self[f"ys_shap_{n_top}"] = []
         self[f"Xs_train_shap_{n_top}"] = []
-        self[f"ys_train_shap_{n_top}"] = []
         self[f"Xs_valid_shap_{n_top}"] = []
-        self[f"ys_valid_shap_{n_top}"] = []
+        # Single feature columns
+        self[f"Xs_provean"] = []
+        self[f"Xs_train_provean"] = []
+        self[f"Xs_ddG"] = []
+        self[f"Xs_train_ddG"] = []
 
     def initialize_train_datasets(self, project_common_file_dir, initial_columns_path, mutations_path):
         log.debug("Initialize `train_data` ..")
@@ -98,9 +100,15 @@ class DataMaterials(dict):
 
     def append_feature_selected_data_materials(self, n_top, selected_features):
         for exp in range(self.n_experiment):
+            # SHAP
             self[f"Xs_shap_{n_top}"].append(self[f"Xs"][exp][selected_features])
             self[f"Xs_train_shap_{n_top}"].append(self[f"Xs_train"][exp][selected_features])
             self[f"Xs_valid_shap_{n_top}"].append(self[f"Xs_valid"][exp][selected_features])
+            # single feature columns
+            self[f"Xs_provean"].append(self["Xs"][exp][["Provean_score"]])
+            self[f"Xs_train_provean"].append(self["Xs_train"][exp][["Provean_score"]])
+            self[f"Xs_ddG"].append(self["Xs"][exp][["Final_ddG"]])
+            self[f"Xs_train_ddG"].append(self["Xs_train"][exp][["Final_ddG"]])
 
     def prepare_feature_selected_data_materials(self):
         pass
