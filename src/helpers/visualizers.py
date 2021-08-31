@@ -4,6 +4,15 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import seaborn as sns
 
+from .mylogger import get_handler
+import logging
+
+handler_simple = get_handler('simple')
+log_simple = logging.getLogger('Visualizers')
+log_simple.handlers[:] = []
+log_simple.addHandler(handler_simple)
+log_simple.setLevel(logging.DEBUG)
+
 
 def get_sampled_datasets_label_counts(sampled_train_data_list):
     sampled_train_data_to_label_counts = {}
@@ -20,38 +29,74 @@ def get_sampled_datasets_label_counts(sampled_train_data_list):
     return sampled_datasets_label_counts
 
 
-def visualize_sampled_train_datasets_label_counts_stripplot(sampled_train_data_list):
+def visualize_sampled_train_datasets_label_counts(sampled_train_data_list, kind):
+
     sampled_datasets_label_counts = get_sampled_datasets_label_counts(
         sampled_train_data_list
     )
 
-    experiment_statistics_data_melted = pd.melt(
-        sampled_datasets_label_counts,
-        id_vars=["SAMPLED_TRAIN_DATA"],
-        value_vars=["Disrupting", "Increasing+NoEff"],
-        var_name="MUTATION_EFFECT",
-        value_name="LABEL_COUNT",
-    )
+    if kind == "strip":
 
-    plt.figure(figsize=(3, 4))
-    sns.stripplot(
-        x="MUTATION_EFFECT",
-        y="LABEL_COUNT",
-        data=experiment_statistics_data_melted,
-        palette="ch:s=-.2,r=.6",
-        jitter=True,
-    )
+        experiment_statistics_data_melted = pd.melt(
+            sampled_datasets_label_counts,
+            id_vars=["SAMPLED_TRAIN_DATA"],
+            value_vars=["Disrupting", "Increasing+NoEff"],
+            var_name="MUTATION_EFFECT",
+            value_name="LABEL_COUNT",
+        )
+
+        plt.figure(figsize=(3, 4))
+        sns.stripplot(
+            x="MUTATION_EFFECT",
+            y="LABEL_COUNT",
+            data=experiment_statistics_data_melted,
+            palette="ch:s=-.2,r=.6",
+            jitter=True,
+        )
+
+    elif kind == "bar":
+        sampled_datasets_label_counts.plot(
+            figsize=(25, 4), kind="bar", color=["#E3D9C1", "#27213F"],
+            title='Label Counts per Experiment', xlabel='Experiment', ylabel='Counts',
+            rot=0
+        )
+
+    else:
+        log_simple.error(f"Parameter `kind` must be either `strip` or `bar`, not `{kind}`")
 
 
-def visualize_sampled_train_datasets_label_counts_barplot(sampled_train_data_list):
-    sampled_datasets_label_counts = get_sampled_datasets_label_counts(
-        sampled_train_data_list
-    )
-    sampled_datasets_label_counts.plot(
-        figsize=(25, 4), kind="bar", color=["#E3D9C1", "#27213F"],
-        title='Label Counts per Experiment', xlabel='Experiment', ylabel='Counts',
-        rot=0
-    )
+# def visualize_sampled_train_datasets_label_counts_stripplot(sampled_train_data_list):
+#     sampled_datasets_label_counts = get_sampled_datasets_label_counts(
+#         sampled_train_data_list
+#     )
+#
+#     experiment_statistics_data_melted = pd.melt(
+#         sampled_datasets_label_counts,
+#         id_vars=["SAMPLED_TRAIN_DATA"],
+#         value_vars=["Disrupting", "Increasing+NoEff"],
+#         var_name="MUTATION_EFFECT",
+#         value_name="LABEL_COUNT",
+#     )
+#
+#     plt.figure(figsize=(3, 4))
+#     sns.stripplot(
+#         x="MUTATION_EFFECT",
+#         y="LABEL_COUNT",
+#         data=experiment_statistics_data_melted,
+#         palette="ch:s=-.2,r=.6",
+#         jitter=True,
+#     )
+
+
+# def visualize_sampled_train_datasets_label_counts_barplot(sampled_train_data_list):
+#     sampled_datasets_label_counts = get_sampled_datasets_label_counts(
+#         sampled_train_data_list
+#     )
+#     sampled_datasets_label_counts.plot(
+#         figsize=(25, 4), kind="bar", color=["#E3D9C1", "#27213F"],
+#         title='Label Counts per Experiment', xlabel='Experiment', ylabel='Counts',
+#         rot=0
+#     )
 
 
 def visualize_accuracy_metrics(
