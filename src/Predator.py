@@ -18,6 +18,8 @@ from helpers.feature_selection import ShapFeatureSelector
 
 # from helpers.feature_selection import AggregatedFeatureSelector
 
+# from .helpers.feature_selection import
+
 from helpers.mylogger import get_handler
 import logging
 
@@ -121,6 +123,19 @@ class Predator:
         self.shap_feature_selector = ShapFeatureSelector(self.n_experiment, shap_top_ns)
         self.shap_feature_selector.load_shap_values(self.data_materials)
         self.shap_feature_selector.get_selected_features(self.data_materials)
+
+        #
+        # for shap_top_n in shap_top_ns:
+        #     self.data_materials.initialize_feature_selected_data_materials(shap_top_n)
+        #     self.data_materials.append_feature_selected_data_materials(shap_top_n, )
+
+    def aggregate_selected_features(self, method):
+        self.shap_feature_selector.aggregate_selected_features(method)
+        for shap_top_n, aggregated_feature in self.shap_feature_selector.n_features_to_aggregated_features.items():
+            self.data_materials.initialize_feature_selected_data_materials(shap_top_n)
+            self.data_materials.append_feature_selected_data_materials(shap_top_n, aggregated_feature)
+
+
 
     # def prepare_feature_selected_data_materials(self, shap_top_n: int):
     #     log.debug("preparing data materials for ML ..")
