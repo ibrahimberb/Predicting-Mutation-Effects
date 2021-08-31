@@ -1,0 +1,42 @@
+,best_params_,best_estimator_,best_score_
+EXP_RUN_1,"{'n_estimators': 1800, 'max_features': 'sqrt', 'max_depth': 2, 'bootstrap': False}","RandomForestClassifier(bootstrap=False, max_depth=2, max_features='sqrt',
+                       n_estimators=1800, random_state=42)",0.6881944444444444
+EXP_RUN_2,"{'n_estimators': 600, 'max_features': 'auto', 'max_depth': 2, 'bootstrap': False}","RandomForestClassifier(bootstrap=False, max_depth=2, n_estimators=600,
+                       random_state=42)",0.6865277777777778
+EXP_RUN_3,"{'n_estimators': 200, 'max_features': 'auto', 'max_depth': 2, 'bootstrap': True}","RandomForestClassifier(max_depth=2, n_estimators=200, random_state=42)",0.6783333333333333
+EXP_RUN_4,"{'n_estimators': 600, 'max_features': 'sqrt', 'max_depth': 7, 'bootstrap': True}","RandomForestClassifier(max_depth=7, max_features='sqrt', n_estimators=600,
+                       random_state=42)",0.6941666666666666
+EXP_RUN_5,"{'n_estimators': 200, 'max_features': 'sqrt', 'max_depth': 2, 'bootstrap': False}","RandomForestClassifier(bootstrap=False, max_depth=2, max_features='sqrt',
+                       n_estimators=200, random_state=42)",0.6113888888888888
+EXP_RUN_6,"{'n_estimators': 200, 'max_features': 'sqrt', 'max_depth': 2, 'bootstrap': True}","RandomForestClassifier(max_depth=2, max_features='sqrt', n_estimators=200,
+                       random_state=42)",0.643888888888889
+EXP_RUN_7,"{'n_estimators': 1800, 'max_features': 'auto', 'max_depth': 12, 'bootstrap': False}","RandomForestClassifier(bootstrap=False, max_depth=12, n_estimators=1800,
+                       random_state=42)",0.6477777777777778
+EXP_RUN_8,"{'n_estimators': 1800, 'max_features': 'auto', 'max_depth': 12, 'bootstrap': True}","RandomForestClassifier(max_depth=12, n_estimators=1800, random_state=42)",0.7084722222222222
+EXP_RUN_9,"{'n_estimators': 200, 'max_features': 'auto', 'max_depth': 7, 'bootstrap': True}","RandomForestClassifier(max_depth=7, n_estimators=200, random_state=42)",0.7061111111111111
+EXP_RUN_10,"{'n_estimators': 1400, 'max_features': 'sqrt', 'max_depth': 7, 'bootstrap': True}","RandomForestClassifier(max_depth=7, max_features='sqrt', n_estimators=1400,
+                       random_state=42)",0.6595833333333332
+EXP_RUN_11,"{'n_estimators': 1000, 'max_features': 'auto', 'max_depth': 12, 'bootstrap': False}","RandomForestClassifier(bootstrap=False, max_depth=12, n_estimators=1000,
+                       random_state=42)",0.6743055555555556
+EXP_RUN_12,"{'n_estimators': 600, 'max_features': 'auto', 'max_depth': 7, 'bootstrap': True}","RandomForestClassifier(max_depth=7, n_estimators=600, random_state=42)",0.6943055555555556
+EXP_RUN_13,"{'n_estimators': 1400, 'max_features': 'sqrt', 'max_depth': 12, 'bootstrap': True}","RandomForestClassifier(max_depth=12, max_features='sqrt', n_estimators=1400,
+                       random_state=42)",0.6427777777777778
+EXP_RUN_14,"{'n_estimators': 200, 'max_features': 'sqrt', 'max_depth': 12, 'bootstrap': True}","RandomForestClassifier(max_depth=12, max_features='sqrt', n_estimators=200,
+                       random_state=42)",0.678611111111111
+EXP_RUN_15,"{'n_estimators': 1800, 'max_features': 'auto', 'max_depth': 2, 'bootstrap': True}","RandomForestClassifier(max_depth=2, n_estimators=1800, random_state=42)",0.6509722222222222
+EXP_RUN_16,"{'n_estimators': 600, 'max_features': 'auto', 'max_depth': 2, 'bootstrap': False}","RandomForestClassifier(bootstrap=False, max_depth=2, n_estimators=600,
+                       random_state=42)",0.6776388888888889
+EXP_RUN_17,"{'n_estimators': 200, 'max_features': 'sqrt', 'max_depth': 2, 'bootstrap': False}","RandomForestClassifier(bootstrap=False, max_depth=2, max_features='sqrt',
+                       n_estimators=200, random_state=42)",0.6113888888888888
+EXP_RUN_18,"{'n_estimators': 1000, 'max_features': 'auto', 'max_depth': 2, 'bootstrap': True}","RandomForestClassifier(max_depth=2, n_estimators=1000, random_state=42)",0.6727777777777778
+EXP_RUN_19,"{'n_estimators': 1800, 'max_features': 'auto', 'max_depth': 2, 'bootstrap': True}","RandomForestClassifier(max_depth=2, n_estimators=1800, random_state=42)",0.6706944444444445
+EXP_RUN_20,"{'n_estimators': 200, 'max_features': 'auto', 'max_depth': 7, 'bootstrap': False}","RandomForestClassifier(bootstrap=False, max_depth=7, n_estimators=200,
+                       random_state=42)",0.6697222222222222
+EXP_RUN_21,"{'n_estimators': 200, 'max_features': 'auto', 'max_depth': 2, 'bootstrap': False}","RandomForestClassifier(bootstrap=False, max_depth=2, n_estimators=200,
+                       random_state=42)",0.6197222222222222
+EXP_RUN_22,"{'n_estimators': 200, 'max_features': 'sqrt', 'max_depth': 12, 'bootstrap': False}","RandomForestClassifier(bootstrap=False, max_depth=12, max_features='sqrt',
+                       n_estimators=200, random_state=42)",0.6381944444444444
+EXP_RUN_23,"{'n_estimators': 1800, 'max_features': 'auto', 'max_depth': 7, 'bootstrap': True}","RandomForestClassifier(max_depth=7, n_estimators=1800, random_state=42)",0.7150000000000001
+EXP_RUN_24,"{'n_estimators': 1400, 'max_features': 'sqrt', 'max_depth': 12, 'bootstrap': True}","RandomForestClassifier(max_depth=12, max_features='sqrt', n_estimators=1400,
+                       random_state=42)",0.6797222222222221
+EXP_RUN_25,"{'n_estimators': 1800, 'max_features': 'auto', 'max_depth': 7, 'bootstrap': True}","RandomForestClassifier(max_depth=7, n_estimators=1800, random_state=42)",0.6502777777777778
