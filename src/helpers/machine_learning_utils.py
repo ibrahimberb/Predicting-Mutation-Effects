@@ -7,6 +7,7 @@ from sklearn.model_selection import cross_val_predict
 from sklearn.model_selection import KFold
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import LeaveOneOut
+from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.metrics import confusion_matrix
