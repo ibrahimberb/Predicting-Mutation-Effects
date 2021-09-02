@@ -110,5 +110,17 @@ class DataMaterials(dict):
             self[f"Xs_ddG"].append(self["Xs"][exp][["Final_ddG"]])
             self[f"Xs_train_ddG"].append(self["Xs_train"][exp][["Final_ddG"]])
 
+    def initialize_target_data_materials(self, determined_features, tcga_code_path_pairs):
+        log.debug("Initializing target data materials ..")
+        for tcga_code_path_pair in tcga_code_path_pairs:
+            tcga_name, tcga_path = tcga_code_path_pair
+            tcga_name = tcga_name.lower()
+            log.debug(f"Initializing {tcga_name} data materials  ..")
+            Xs_tcga = []
+            for _ in range(self.n_experiment):
+                Xs_tcga.append(self[f"target_{tcga_name}_data"][determined_features].copy(deep=True))
+
+            self[f"Xs_{tcga_name}"] = Xs_tcga
+
     def prepare_feature_selected_data_materials(self):
         pass
