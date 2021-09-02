@@ -8,6 +8,8 @@ from tqdm.notebook import tqdm
 
 from helpers.data_sampling import prepare_data_spsm
 
+from helpers.paths import Paths
+
 # from helpers.data_materials import DataMaterialsML
 from helpers.data_materials import DataMaterials
 
@@ -20,6 +22,12 @@ from helpers.feature_selection import ShapFeatureSelector
 
 # from .helpers.feature_selection import
 
+from helpers.evaluation import EvaluationMetrics, EvaluationValid
+
+from helpers.fine_tuning import FineTuner
+
+from helpers.models import DefaultModels, TunedModels, FinalizedModels
+
 from helpers.mylogger import get_handler
 import logging
 
@@ -29,7 +37,6 @@ log = logging.getLogger(__name__)
 log.handlers[:] = []
 log.addHandler(handler)
 log.setLevel(logging.DEBUG)
-
 
 # PATHS
 PROJECT_COMMON_FILE_DIR = Path("../data/")
@@ -42,13 +49,12 @@ TCGA_CODE = str
 
 class Predator:
     def __init__(
-        self,
-        project_common_file_dir: Path,
-        mutations_path: Path,
-        tcga_code_path_pairs: List[Tuple[TCGA_CODE, Path]],
-        initial_columns_path: Path,
-        n_experiment: int,
-        feature_selection_args=None,
+            self,
+            project_common_file_dir: Path,
+            mutations_path: Path,
+            tcga_code_path_pairs: List[Tuple[TCGA_CODE, Path]],
+            initial_columns_path: Path,
+            n_experiment: int,
     ):
 
         log.debug('Initializing Predator ..')
@@ -57,25 +63,39 @@ class Predator:
             range(1, self.n_experiment + 1)
         )  # todo: this will be a random array, too.
 
+        self.paths = Paths(
+            project_common_file_dir,
+            mutations_path,
+            tcga_code_path_pairs,
+            initial_columns_path,
+        )
+
         self.data_materials = DataMaterials(n_experiment, self.random_seeds)
 
-        self.data_materials.initialize_train_datasets(project_common_file_dir, initial_columns_path, mutations_path)
-        self.data_materials.initialize_target_datasets(project_common_file_dir, initial_columns_path, tcga_code_path_pairs)
+        self.data_materials.initialize_train_datasets(
+            project_common_file_dir, initial_columns_path, mutations_path
+        )
+        self.data_materials.initialize_target_datasets(
+            project_common_file_dir, initial_columns_path, tcga_code_path_pairs
+        )
+
+        self.default_models = DefaultModels(self.n_experiment)
+        self.tuned_models = None
+        self.finalized_models = None
+
+        self.eval_valid = EvaluationValid(
+            self.n_experiment,
+            self.data_materials,
+            self.default_models,
+            self.tuned_models
+        )
+
+        self.determined_feature_set = None
+        self.determined_features = None
 
         self.shap_feature_selector = None
-
-        ##########################
-        self.selected_features = None
-        # self.aggregated_feature_selector = AggregatedFeatureSelector(features_list=[[]], aggregation_method=None)
-
-        # todo
-        self.Xs_train_benchmark_feature_names_dataframes_list = None
-
-        # fixme: code refactor.
-        # feature_selection_args = {n_features, }
-
-        # -------------------------------------------------------------------------------
-
+        self.eval_metrics = None
+        self.fine_tuner = None
         # -------------------------------------------------------------------------------
 
         # variant = spsm
@@ -92,42 +112,50 @@ class Predator:
 
         self.data_materials["sampled_train_data_list"] = sampled_train_data_list
 
-    def run_evaluate_valid(self, model_type="default", confusion_matrix=False) -> Tuple[List[float], List[float]]:
-        if model_type == "default":
-            classifiers = [get_default_classifier()] * self.n_experiment
-        else:
-            # TODO
-            classifiers = [get_default_classifier()] * self.n_experiment
-            # classifiers = self.classifiers
+    def run_evaluate_valid(
+        self,
+        models_type="default",
+        show_confusion_matrix=False,
+    ):
 
-        log.debug("Evaluating on validation data ..")
-        accuracy_scores = []
-        balanced_accuracy_scores = []
-        for i in tqdm(range(self.n_experiment)):
-            print("-------- EXPERIMENT: {:>2} --------".format(i + 1))
-            acc_score, balan_acc_score = evaluate_valid(
-                classifiers[i],
-                self.data_materials["Xs_train"][i],
-                self.data_materials["ys_train"][i],
-                self.data_materials["Xs_valid"][i],
-                self.data_materials["ys_valid"][i],
-                show_confusion_matrix=confusion_matrix,
-            )
-            accuracy_scores.append(acc_score)
-            balanced_accuracy_scores.append(balan_acc_score)
-            print("================================")
+        if models_type == 'tuned':
+            self.eval_valid.tuned_models = self.tuned_models
 
-        return accuracy_scores, balanced_accuracy_scores
+        self.eval_valid.evaluate(
+            models_type=models_type,
+            show_confusion_matrix=show_confusion_matrix,
+            determined_features=self.determined_features
+        )
+        # if models_type == "default":
+        #     classifiers = [get_default_classifier()] * self.n_experiment
+        # elif models_type == "tuned":
+        #     # TODO
+        #     classifiers = [get_default_classifier()] * self.n_experiment
+        #     # classifiers = self.classifiers
+        # else:
+        #     raise ValueError("Invalid arg for `models_type`.")
+        #
+        # log.debug("Evaluating on validation data ..")
+        # accuracy_scores = []
+        # balanced_accuracy_scores = []
+        # for i in tqdm(range(self.n_experiment)):
+        #     print("-------- EXPERIMENT: {:>2} --------".format(i + 1))
+        #     acc_score, balan_acc_score = evaluate_valid(
+        #         classifiers[i],
+        #         self.data_materials["Xs_train"][i],
+        #         self.data_materials["ys_train"][i],
+        #         self.data_materials["Xs_valid"][i],
+        #         self.data_materials["ys_valid"][i],
+        #         show_confusion_matrix=confusion_matrix,
+        #     )
+        #     accuracy_scores.append(acc_score)
+        #     balanced_accuracy_scores.append(balan_acc_score)
+        #     print("================================")
 
     def init_shap_feature_selector(self, shap_top_ns):
         self.shap_feature_selector = ShapFeatureSelector(self.n_experiment, shap_top_ns)
         self.shap_feature_selector.load_shap_values(self.data_materials)
         self.shap_feature_selector.get_selected_features(self.data_materials)
-
-        #
-        # for shap_top_n in shap_top_ns:
-        #     self.data_materials.initialize_feature_selected_data_materials(shap_top_n)
-        #     self.data_materials.append_feature_selected_data_materials(shap_top_n, )
 
     def aggregate_selected_features(self, method):
         self.shap_feature_selector.aggregate_selected_features(method)
@@ -135,6 +163,41 @@ class Predator:
             self.data_materials.initialize_feature_selected_data_materials(shap_top_n)
             self.data_materials.append_feature_selected_data_materials(shap_top_n, aggregated_feature)
 
+    def initialize_evalutation_metrics(self):
+        self.eval_metrics = EvaluationMetrics(self.n_experiment, self.data_materials, self.shap_feature_selector)
+
+    def set_determined_feature_set(self, feature_set: str):
+        _, top_n = feature_set.split('_')
+        determined_features = (
+            self
+            .shap_feature_selector
+            .n_features_to_aggregated_features[int(top_n)]
+        )
+        log.debug(f"Setting determined feature set to `{feature_set}`.")
+        self.determined_feature_set = feature_set
+        log.debug(f"Setting determined features to \n{determined_features}.")
+        self.determined_features = determined_features
+
+    def init_fine_tuner(self, n_iter, n_repeats_cv, n_jobs, verbose):
+        # Fine tuning will be applied to training set, not all training data.
+        Xs_determined = f"Xs_train_{self.determined_feature_set}"
+
+        self.fine_tuner = FineTuner(n_iter=n_iter, n_repeats_cv=n_repeats_cv, n_jobs=n_jobs, verbose=verbose,
+                                    Xs_determined=Xs_determined, n_experiment=self.n_experiment,
+                                    random_seeds=self.random_seeds, data_materials=self.data_materials)
+
+    def run_search(self, search_type):
+        self.fine_tuner.run_search(search_type)
+        self.tuned_models = TunedModels(self.fine_tuner.best_estimators)
+        # self.models = Models(self.fine_tuner.best_estimators)
+
+    def fit_finalized_models(self):
+        log.debug("Fitting finalized models with all training data ..")
+        self.finalized_models = FinalizedModels(self.tuned_models)
+        self.finalized_models.fit_all(self.data_materials, self.determined_feature_set)
+
+    def predict(self):
+        raise NotImplementedError
 
 
     # def prepare_feature_selected_data_materials(self, shap_top_n: int):
@@ -145,11 +208,9 @@ class Predator:
     #             self.sampled_train_data_list[i], random_seed=self.random_seeds[i]
     #         )
 
-
-    def evaluation_metrics(self):
-        # second thought, it's not needed.
-        raise NotImplementedError
-
+    # def evaluation_metrics(self):
+    #     # second thought, it's not needed.
+    #     raise NotImplementedError
 
 #
 # predator = Predator(project_common_file_dir=PROJECT_COMMON_FILE_DIR,
