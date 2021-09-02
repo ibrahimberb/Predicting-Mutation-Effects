@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -65,40 +65,6 @@ def visualize_sampled_train_datasets_label_counts(sampled_train_data_list, kind)
         log_simple.error(f"Parameter `kind` must be either `strip` or `bar`, not `{kind}`")
 
 
-# def visualize_sampled_train_datasets_label_counts_stripplot(sampled_train_data_list):
-#     sampled_datasets_label_counts = get_sampled_datasets_label_counts(
-#         sampled_train_data_list
-#     )
-#
-#     experiment_statistics_data_melted = pd.melt(
-#         sampled_datasets_label_counts,
-#         id_vars=["SAMPLED_TRAIN_DATA"],
-#         value_vars=["Disrupting", "Increasing+NoEff"],
-#         var_name="MUTATION_EFFECT",
-#         value_name="LABEL_COUNT",
-#     )
-#
-#     plt.figure(figsize=(3, 4))
-#     sns.stripplot(
-#         x="MUTATION_EFFECT",
-#         y="LABEL_COUNT",
-#         data=experiment_statistics_data_melted,
-#         palette="ch:s=-.2,r=.6",
-#         jitter=True,
-#     )
-
-
-# def visualize_sampled_train_datasets_label_counts_barplot(sampled_train_data_list):
-#     sampled_datasets_label_counts = get_sampled_datasets_label_counts(
-#         sampled_train_data_list
-#     )
-#     sampled_datasets_label_counts.plot(
-#         figsize=(25, 4), kind="bar", color=["#E3D9C1", "#27213F"],
-#         title='Label Counts per Experiment', xlabel='Experiment', ylabel='Counts',
-#         rot=0
-#     )
-
-
 def visualize_accuracy_metrics(
     acc_scores: List[float],
     balan_acc_scores: List[float],
@@ -112,3 +78,25 @@ def visualize_accuracy_metrics(
                 palette=sns.color_palette(['#265191', '#9F2945']),
                 kind=kind)
     plt.show()
+
+
+def visualize_distribution_top_n_features(shap_feature_selector, top_n):
+    feature_to_counts = {}
+    for feature in shap_feature_selector.n_features_to_aggregated_features[top_n]:
+        count = (shap_feature_selector.aggregated_feature_selector
+                 .n_features_to_selected_features_occurrences_counts[top_n])[feature]
+        feature_to_counts[feature] = count
+
+    counts_data = pd.DataFrame(feature_to_counts, index=['counts'])
+    counts_data = pd.melt(counts_data, var_name='FEATURES', value_name='COUNTS')
+    sns.barplot(x='FEATURES', y='COUNTS', color="#4C4C4C", data=counts_data)
+    plt.title(f'Distribution of top-{top_n} features', fontweight="bold")
+    plt.xlabel(None)
+    plt.xticks(ha='right', rotation=45)
+
+    sns.despine(right=True)
+
+    plt.show()
+
+
+
