@@ -9,9 +9,9 @@ from collections import defaultdict
 from pandas import DataFrame
 
 import numpy as np
+import pandas as pd
 
 import shap
-
 
 from .mylogger import get_handler
 import logging
@@ -32,13 +32,17 @@ log_simple.setLevel(logging.DEBUG)
 
 # ## i was here.
 @dataclass
-class AggregationMethods:
+class FeatureAggregationMethods:
     OCCURRANCE = 'occurrance'
     CONCORDANCE = 'concordance'
 
 
 class ShapFeatureSelector:
-    def __init__(self, n_experiment, shap_top_ns: List[int]):
+    def __init__(
+            self,
+            n_experiment,
+            shap_top_ns: List[int]
+    ):
         log.debug("Initializing ShapFeatureSelector ..")
         self.shap_top_ns = shap_top_ns
         self.n_experiment = n_experiment
@@ -81,7 +85,7 @@ class ShapFeatureSelector:
                 shap_values = self.shap_values_train_list[exp][1]
                 features_data = data_materials["Xs_train"][exp]
                 selected_features = self.get_selected_features_single_data(shap_values, features_data, top_n=top_n)
-                log_simple.debug(f"Experiment {exp+1}")
+                log_simple.debug(f"Experiment {exp + 1}")
                 print(f"{selected_features}\n")
                 self.n_features_to_selected_features_list[top_n].append(selected_features)
 
@@ -89,6 +93,17 @@ class ShapFeatureSelector:
         self.aggregated_feature_selector = AggregatedFeatureSelector(self.n_features_to_selected_features_list, method)
         self.aggregated_feature_selector.aggregate()
         self.n_features_to_aggregated_features = self.aggregated_feature_selector.n_features_to_aggregated_features
+
+    def display_rankings(self, top_n, extract):
+        log.debug("Displaying rankings ..")
+        data = pd.DataFrame(self.n_features_to_selected_features_list[top_n])
+        filename = f'rankings_{top_n}.csv'
+        if extract:
+            log.debug("Extracting rankings ..")
+            data.to_csv(filename, index=False)
+            log.debug(f"Rankings are extracted to file {filename}.")
+
+        return data.head()
 
     # def init_shap_feature_selector(self, data_materials: DataMaterials):
     #     self.load_shap_values(data_materials)
@@ -110,15 +125,15 @@ class ShapFeatureSelector:
         # self.append_top_n_features(data_materials)
 
 
-class AggregatedFeatureSelector:                  # fixme ↓
+class AggregatedFeatureSelector:  # fixme ↓
     def __init__(self, n_features_to_selected_features_list: Dict[int, List[List[str]]], aggregation_method=None):
         self.aggregation_method = aggregation_method
         self.n_features_to_selected_features_list = n_features_to_selected_features_list
         self.n_features_to_aggregated_features = None
-        self.n_features_to_selected_features_occurrences_counts = defaultdict(list)
+        self.n_features_to_selected_features_occurrences_counts = defaultdict(dict)
 
     def aggregate(self):
-        if self.aggregation_method == AggregationMethods.OCCURRANCE:
+        if self.aggregation_method == FeatureAggregationMethods.OCCURRANCE:
             self.n_features_to_aggregated_features = self.aggregate_occurrance()
 
     def aggregate_occurrance(self) -> Dict[int, list]:
@@ -133,6 +148,6 @@ class AggregatedFeatureSelector:                  # fixme ↓
             frequently_occurred_features = sorted(selected_features_to_occurrences,
                                                   key=selected_features_to_occurrences.get, reverse=True)[:top_n]
             top_n_to_frequently_occurred_features[top_n] = frequently_occurred_features
-            self.n_features_to_selected_features_occurrences_counts[top_n].append(selected_features_to_occurrences)
+            self.n_features_to_selected_features_occurrences_counts[top_n] = selected_features_to_occurrences
 
         return top_n_to_frequently_occurred_features
