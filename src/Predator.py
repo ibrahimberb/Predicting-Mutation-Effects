@@ -2,8 +2,6 @@
 from typing import List, Tuple
 from pathlib import Path
 
-from helpers.machine_learning_utils import get_default_classifier, evaluate_valid
-
 from tqdm.notebook import tqdm
 
 from helpers.data_sampling import prepare_data_spsm
@@ -26,7 +24,9 @@ from helpers.evaluation import EvaluationMetrics, EvaluationValid
 
 from helpers.fine_tuning import FineTuner
 
-from helpers.models import DefaultModels, TunedModels, FinalizedModels
+from helpers.predictions import Predictions
+
+from helpers.models import DefaultModels, TunedModels, FinalizedModels, EnsambledVotingClassifier
 
 from helpers.mylogger import get_handler
 import logging
@@ -70,6 +70,10 @@ class Predator:
             initial_columns_path,
         )
 
+        self.tcga_cohorts = []
+        for tcga, _ in tcga_code_path_pairs:
+            self.tcga_cohorts.append(tcga)
+
         self.data_materials = DataMaterials(n_experiment, self.random_seeds)
 
         self.data_materials.initialize_train_datasets(
@@ -96,7 +100,9 @@ class Predator:
         self.shap_feature_selector = None
         self.eval_metrics = None
         self.fine_tuner = None
-        # -------------------------------------------------------------------------------
+
+        self.ensambled_voting_classifier = None
+        self.predictions = None
 
         # variant = spsm
         # self.variant = variant
@@ -189,15 +195,46 @@ class Predator:
     def run_search(self, search_type):
         self.fine_tuner.run_search(search_type)
         self.tuned_models = TunedModels(self.fine_tuner.best_estimators)
-        # self.models = Models(self.fine_tuner.best_estimators)
 
     def fit_finalized_models(self):
         log.debug("Fitting finalized models with all training data ..")
         self.finalized_models = FinalizedModels(self.tuned_models)
         self.finalized_models.fit_all(self.data_materials, self.determined_feature_set)
 
-    def predict(self):
-        raise NotImplementedError
+    def initialize_target_data_materials(self):
+        self.data_materials.initialize_target_data_materials(
+            self.determined_features, self.paths.tcga_code_path_pairs
+        )
+
+    def predict(self, voting="hard"):
+        log.debug("Predicting on cancer datasets ..")
+        self.ensambled_voting_classifier = EnsambledVotingClassifier(
+            self.finalized_models, voting=voting
+        )
+        self.predictions = Predictions(self.n_experiment)
+        for tcga in self.tcga_cohorts:
+            log.debug(f"Predicting on {tcga} cohort ..")
+            tcga_predictions = self.ensambled_voting_classifier.predict(
+                self.data_materials[f"Xs_{tcga}"]
+            )
+            self.predictions.add_predictions(tcga, tcga_predictions)
+
+        log.debug("Predictions completed.")
+        log.debug(f"Predictions are available from predator.predictions.keys().")
+
+    def predictions_post_process(self):
+        for tcga in self.tcga_cohorts:
+            self.predictions.merge_predictions_cancer_datasets(
+                tcga, self.data_materials[f"{tcga}"]
+            )
+            self.predictions.post_process_predictions(tcga)
+
+    def prepare_ensambled_prediction_data(self):
+        for tcga in self.tcga_cohorts:
+            self.predictions.prepare_ensambled_prediction_data(
+                tcga, self.data_materials[f"{tcga}"]
+            )
+
 
 
     # def prepare_feature_selected_data_materials(self, shap_top_n: int):
