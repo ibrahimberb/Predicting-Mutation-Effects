@@ -1,8 +1,21 @@
-from typing import List
+from typing import List, Union
 
 import pandas as pd
 from pandas import DataFrame
 from .mylogger import get_handler
+from .predictions_utils import (
+    get_predictive_columns_removed_data,
+    max_votes,
+    convert_primary_isomer,
+    get_triplet_columns,
+    remove_triplet_columns,
+    drop_invalid_predicted_entries,
+    drop_invalid_predicted_probs_entries,
+    add_votes,
+    add_voted_probs,
+    take_avg,
+)
+
 import logging
 import matplotlib.pyplot as plt
 
@@ -14,6 +27,13 @@ log = logging.getLogger(__name__)
 log.handlers[:] = []
 log.addHandler(handler)
 log.setLevel(logging.DEBUG)
+
+
+def predictions_object(voting, n_experiment):
+    if voting == 'hard':
+        return PredictionsHard(n_experiment)
+    elif voting == 'soft':
+        return PredictionsSoft(n_experiment)
 
 
 class Predictions(dict):
@@ -48,8 +68,8 @@ class Predictions(dict):
         predictions_distributions_data = self.predictions_distributions_per_exp[tcga].copy()
         predictions_distributions_data = (
             predictions_distributions_data
-            .rename_axis("EXPERIMENT")
-            .reset_index()
+                .rename_axis("EXPERIMENT")
+                .reset_index()
         )
         predictions_distributions_data.plot(
             x="EXPERIMENT",
@@ -68,10 +88,6 @@ class Predictions(dict):
         self.init_value_counts(tcga)
         self.prepare_predictions_distribution_data(tcga)
         self.plot_distributions(tcga)
-
-    def add_predictions(self, tcga, tcga_predictions):
-        log.debug(f"Adding key `{tcga}` to self.predictions")
-        self[tcga] = tcga_predictions
 
     def plot_distribution_valid_vs_invalid(self, tcga):
         valid_vs_invalid_counts_data = pd.DataFrame({
@@ -113,80 +129,6 @@ class Predictions(dict):
         plt.ylabel("Number of Entries")
         plt.show()
 
-    def merge_predictions_cancer_datasets(self, tcga, tcga_data):
-        log.debug(f"Merging predictions with {tcga} cancer dataset ..")
-        tcga_predicted_datasets = []
-        for exp in range(self.n_experiment):
-            tcga_predicted_data = tcga_data.copy(deep=True)
-            # Insert prediction array values into data as first (0th) column.
-            tcga_predicted_data.insert(0, 'Predictions', self[f"{tcga}"][exp])
-            tcga_predicted_datasets.append(tcga_predicted_data)
-
-        self[f"{tcga}_predicted_datasets"] = tcga_predicted_datasets
-
-    def post_process_predictions(self, tcga):
-        log.debug(f"Post processing predictions for cohort {tcga} ..")
-        tcga_predicted_valid_datasets = []
-        tcga_predicted_invalid_datasets = []
-        for exp in tqdm(range(self.n_experiment)):
-            isomer_converted_data = self.convert_primary_isomer(
-                column_name="Interactor_UniProt_ID",
-                data=self[f"{tcga}_predicted_datasets"][exp]
-            )
-            predicted_valid_data, predicted_invalid_data = self.drop_invalid_predicted_entries(
-                isomer_converted_data
-            )
-
-            tcga_predicted_valid_datasets.append(predicted_valid_data)
-            tcga_predicted_invalid_datasets.append(predicted_invalid_data)
-
-        self[f"{tcga}_predicted_valid_datasets"] = tcga_predicted_valid_datasets
-        self[f"{tcga}_predicted_invalid_datasets"] = tcga_predicted_invalid_datasets
-        log.debug(f"Preparing finalized prediction datasets for {tcga} ..")
-        self.prepare_finalized_prediction_datasets(tcga, tcga_predicted_valid_datasets)
-        log.debug(f"Post processing completed for {tcga}.")
-
-    @staticmethod
-    def get_predictive_columns_removed_data(data: DataFrame) -> DataFrame:
-        """
-        Remove predictive columns (i.e. feature columns) from given dataset, leaving them
-        with predictions and triplets.
-
-        Parameters
-        ----------
-            data : <DataFrame>
-                The input dataframe whose predictive columns to be removed.
-
-        Returns
-        -------
-            features_removed_data : <DataFrame>
-                The dataframe containing prediction values along with triplet information.
-                I.e. ["Predictions", "UniProt_ID", "Mutation", "Interactor_UniProt_ID"]
-        """
-
-        features_removed_data = data[["Predictions", "UniProt_ID", "Mutation", "Interactor_UniProt_ID"]].copy()
-        return features_removed_data
-
-    @staticmethod
-    def get_triplet_columns(data: DataFrame) -> DataFrame:
-        """
-        Remove all columns except (protein, mutation, interactor) triplets.
-
-        Parameters
-        ----------
-            data : <DataFrame>
-                The input dataframe whose non-triplet columns to be removed.
-
-        Returns
-        -------
-            triplet_data : <DataFrame>
-                The dataframe containing triplet information with following columns:
-                ["UniProt_ID", "Mutation", "Interactor_UniProt_ID"]
-        """
-
-        triplet_data = data[["UniProt_ID", "Mutation", "Interactor_UniProt_ID"]].copy()
-        return triplet_data
-
     def get_predictive_columns_removed_datasets(
             self,
             prediction_datasets: List[DataFrame]
@@ -209,7 +151,7 @@ class Predictions(dict):
 
         features_removed_datasets = []
         for exp in range(self.n_experiment):
-            features_removed_data = self.get_predictive_columns_removed_data(prediction_datasets[exp])
+            features_removed_data = get_predictive_columns_removed_data(prediction_datasets[exp])
             features_removed_datasets.append(features_removed_data)
 
         return features_removed_datasets
@@ -220,56 +162,6 @@ class Predictions(dict):
         )
         self.drop_duplicated_entries_datasets(tcga_finalized_prediction_dataframes)
         self[f"{tcga}_finalized_prediction_dataframes"] = tcga_finalized_prediction_dataframes
-
-    @staticmethod
-    def drop_invalid_predicted_entries(data: DataFrame):
-        """
-        Prediction data contains entries which for the same (PROTEIN, MUTATION, INTERACTOR), the predicted
-        class is both 0 and 1. Find such instances, and drop them.
-
-        Parameters
-        ----------
-            data : <DataFrame>
-                The dataframe whose invalid predicted entries will be dropped.
-
-        Returns
-        -------
-            data : <DataFrame>
-                Processed version of input dataframe.
-
-            removed_entries_data : <DataFrame>
-                A dataframe which contains removed entires.
-        """
-
-        entries = []
-        entries_ix = []
-
-        # For each (PROTEIN, MUTATION, INTERACTOR), capture the predicted class numbers.
-        # If they are not all the same, then that (PROTEIN, MUTATION, INTERACTOR) row will be dropped.
-        for index, row in data.iterrows():
-            # Predicted class number(s) for current (PROTEIN, MUTATION, INTERACTOR) triplet.
-            # Ideally, should be all the same. If not, then it will contain two class names.
-            seach_data_predictions = data[(data["UniProt_ID"] == row["UniProt_ID"]) &
-                                          (data["Mutation"] == row["Mutation"]) &
-                                          (data["Interactor_UniProt_ID"] == row["Interactor_UniProt_ID"])][
-                "Predictions"].unique()
-
-            # If seach_data_predictions contains class-0 and class-1 together, then it is an invalid predicted entries.
-            if len(seach_data_predictions) > 1:
-                entries.append((row["Predictions"], row["UniProt_ID"], row["Mutation"], row["Interactor_UniProt_ID"]))
-                entries_ix.append(index)
-
-        removed_entries_data = pd.DataFrame(entries,
-                                            columns=["PREDICTIONS", "PROTEIN", "MUTATION", "INTERACTOR"])
-        log.debug('Removed entries: \n{}'.format(removed_entries_data))
-
-        # Drop invalid predicted entries based on their index.
-        data_dropped = data.drop(entries_ix, axis='index')
-
-        # Reset index of the dataframe to avoid any possible errors.
-        data_dropped.reset_index(drop=True, inplace=True)
-
-        return data_dropped, removed_entries_data
 
     def drop_duplicated_entries_datasets(self, datasets: List[DataFrame]) -> None:
         """
@@ -286,118 +178,180 @@ class Predictions(dict):
         for exp in range(self.n_experiment):
             datasets[exp].drop_duplicates(keep="first", inplace=True)
 
-    @staticmethod
-    def convert_primary_isomer(column_name: str, data: DataFrame) -> DataFrame:
-        """
-        Converts proteins into primary form representation (dash-free from) in given column name of the given dataframe.
-        E.g.
-            P16473-2 → P16473
+    def plot_ensemble_prediction_distribution(self, tcga):
+        voted_predictions = self[f"{tcga}_ensemble_prediction_data"]['VOTED_PREDICTION']
+        voted_predictions.value_counts().plot(kind="bar")
+        plt.title(f'Distribution of predictions for {tcga}')
+        plt.xlabel('Predictions')
+        plt.ylabel('Count')
+        plt.grid()
 
-        Parameters
-        ----------
-            column_name : <string>
-                Name of the column where protein is stored.
 
-            data : <DataFrame>
-                The dataframe whose proteins will be processed in `column_name` column.
+class PredictionsHard(Predictions):
+    def __init__(self, n_experiment):
+        log.debug(f'Initializing: {__class__.__name__}')
+        super().__init__(n_experiment=n_experiment)
 
-        Returns
-        -------
-            data : <DataFrame>
-                Processed version of input dataframe.
+    def add_predictions(self, tcga, tcga_predictions):
+        log.debug(f'{__class__.__name__}')
+        log.debug(f"Predicting on {tcga} cohort ..")
+        log.debug(f"Adding key `{tcga}` to self.predictions")
+        self[tcga] = tcga_predictions
 
-        """
-
-        # Protein names will be converted dashed-free version, if they contain.
-        data[column_name] = data[column_name].apply(lambda x: x.split('-')[0])
-
-        return data
-
-    @staticmethod
-    def get_prediction_entry(protein, mutation, interactor, data):
-        predictions_array = data[
-            (data['UniProt_ID'] == protein) &
-            (data['Mutation'] == mutation) &
-            (data['Interactor_UniProt_ID'] == interactor)
-        ]['Predictions'].values
-
-        # The entry such that it is predicted both `1` and `0` for that triplet, hence dropped.
-        if predictions_array.size == 0:
-            return 'NO_VOTE'
-
-        # Prediction array contains one element, and return that element.
-        elif len(predictions_array) == 1:
-            [prediction] = predictions_array  # extracting single value from length-1 list.
-            return prediction
-
-        else:
-            raise ValueError('There should be one entry, thus one prediction value, '
-                             'but contains {} elements.'.format(len(predictions_array)))
-
-    def add_votes(
-            self,
-            data: DataFrame,
-            final_prediction_datasets: List[DataFrame]
-    ) -> DataFrame:
-        """
-        Add the votes from final prediction datasets to given data.
-        For each entry in data to become ensambled prediction data, the corresponding predictions will be looked up
-        and placed at that entry. If corresponding prediction does not exists (indicating that prediction removed from
-        that prediction data because it was an invalid prediction), "NO_VOTE" label will be assigned.
-
-        Data will have the following form:
-            +---------+----------+------------+--------------+--------------+-----+--------------+
-            | Protein | Mutation | Interactor | Prediction 1 | Prediction 2 | ... | Prediction N |
-            +---------+----------+------------+--------------+--------------+-----+--------------+
-            |         |          |            | 1            | 0            | ... | 1            |
-            +---------+----------+------------+--------------+--------------+-----+--------------+
-            |         |          |            | 0            | 0            | ... | NO_VOTE      |
-            +---------+----------+------------+--------------+--------------+-----+--------------+
-            |         |          |            | 1            | 1            | ... | 1            |
-            +---------+----------+------------+--------------+--------------+-----+--------------+
-
-        Parameters
-        ----------
-            data : <DataFrame>
-                The data to be ensambled prediction data, which final predictions will be added to.
-
-            final_prediction_datasets : <List[DataFrame]>
-                A list of datasets containing predictions.
-
-        Returns
-        -------
-            data : <DataFrame>
-                Corresponding predictions added version of input data.
-        """
-
-        final_votes = []
-        for index, row in tqdm(data.iterrows(), total=len(data)):
-            protein, mutation, interactor = row['UniProt_ID'], row['Mutation'], row['Interactor_UniProt_ID']
-
-            votes = []
-            for final_prediction_data in final_prediction_datasets:
-                prediction = self.get_prediction_entry(protein, mutation, interactor, final_prediction_data)
-                votes.append(prediction)
-
-            final_votes.append((votes.count(0), votes.count(1), votes.count('NO_VOTE')))
-
-        data['Num_preds_0'] = [item for item, _, _ in final_votes]
-        data['Num_preds_1'] = [item for _, item, _ in final_votes]
-        data['Num_preds_NO_VOTE'] = [item for _, _, item in final_votes]
-
-        return data
-
-    def prepare_ensambled_prediction_data(self, tcga, tcga_data):
-        log.debug(f"Preparing ensambled prediction data for {tcga} ..")
-        tcga_ensambled_prediction_data = self.get_triplet_columns(tcga_data)
-        tcga_ensambled_prediction_data = self.convert_primary_isomer(
-            "Interactor_UniProt_ID", tcga_ensambled_prediction_data
+    def prepare_ensemble_prediction_data(self, tcga, tcga_data):
+        log.debug(f'{__class__.__name__}')
+        log.debug(f"Preparing ensemble prediction data for {tcga} ..")
+        tcga_ensemble_prediction_data = get_triplet_columns(tcga_data)
+        tcga_ensemble_prediction_data = convert_primary_isomer(
+            "Interactor_UniProt_ID", tcga_ensemble_prediction_data
         )
-        tcga_ensambled_prediction_data.drop_duplicates(keep="first", inplace=True)
-        tcga_ensambled_prediction_data.reset_index(drop=True, inplace=True)
-        # brca_ensamble_prediction_data.apply(lambda voting: voting()) ## todo vectorication using 3 column as param.
-        tcga_ensambled_prediction_data = self.add_votes(
-            tcga_ensambled_prediction_data, self[f"{tcga}_finalized_prediction_dataframes"]
+        tcga_ensemble_prediction_data.drop_duplicates(keep="first", inplace=True)
+        tcga_ensemble_prediction_data.reset_index(drop=True, inplace=True)
+        # brca_ensemble_prediction_data.apply(lambda voting: voting()) ## todo vectorication using 3 column as param.
+        tcga_ensemble_prediction_data = add_votes(
+            tcga_ensemble_prediction_data, self[f"{tcga}_finalized_prediction_dataframes"]
         )
-        self[f"{tcga}_ensambled_prediction_data"] = tcga_ensambled_prediction_data
-        log.debug(f"Ensambled prediction data for {tcga} is prepared.")
+        tcga_ensemble_prediction_data['VOTED_PREDICTION'] = tcga_ensemble_prediction_data.apply(
+            max_votes, axis=1
+        )
+        self[f"{tcga}_ensemble_prediction_data"] = tcga_ensemble_prediction_data
+        log.debug(f"Ensemble prediction data for {tcga} is prepared.")
+        self[f"{tcga}_prediction_results"] = tcga_ensemble_prediction_data.drop(
+            ["Num_preds_0", "Num_preds_1", "Num_preds_NO_VOTE"], axis='columns'
+        )
+        log.debug(f"Resulting prediction data is available for {tcga}.\n"
+                  f"Accessible from predictions.['{tcga}_prediction_results']")
+
+    def merge_predictions_cancer_datasets(self, tcga, tcga_data):
+        log.debug(f"Merging predictions with {tcga} cancer dataset ..")
+        tcga_predicted_datasets = []
+        for exp in range(self.n_experiment):
+            tcga_predicted_data = tcga_data.copy(deep=True)
+            # Insert prediction array values into data as first (0th) column.
+            tcga_predicted_data.insert(0, 'Predictions', self[f"{tcga}"][exp])
+            tcga_predicted_datasets.append(tcga_predicted_data)
+
+        self[f"{tcga}_predicted_datasets"] = tcga_predicted_datasets
+
+    def post_process_predictions(self, tcga, tcga_datasets):
+        log.debug(f'{__class__.__name__}')
+        log.debug(f"Post processing predictions for cohort {tcga} ..")
+
+        self.merge_predictions_cancer_datasets(
+            tcga, tcga_datasets
+        )
+
+        tcga_predicted_valid_datasets = []
+        tcga_predicted_invalid_datasets = []
+        for exp in tqdm(range(self.n_experiment)):
+            isomer_converted_data = convert_primary_isomer(
+                column_name="Interactor_UniProt_ID",
+                data=self[f"{tcga}_predicted_datasets"][exp]
+            )
+            predicted_valid_data, predicted_invalid_data = drop_invalid_predicted_entries(
+                isomer_converted_data
+            )
+
+            tcga_predicted_valid_datasets.append(predicted_valid_data)
+            tcga_predicted_invalid_datasets.append(predicted_invalid_data)
+
+        self[f"{tcga}_predicted_valid_datasets"] = tcga_predicted_valid_datasets
+        self[f"{tcga}_predicted_invalid_datasets"] = tcga_predicted_invalid_datasets
+        log.debug(f"Preparing finalized prediction datasets for {tcga} ..")
+        self.prepare_finalized_prediction_datasets(tcga, tcga_predicted_valid_datasets)
+        log.debug(f"Post processing completed for {tcga}.")
+
+
+class PredictionsSoft(Predictions):
+    def __init__(self, n_experiment):
+        log.debug(f'Initializing: {__class__.__name__}')
+        super().__init__(n_experiment=n_experiment)
+
+    def add_predictions(self, tcga, tcga_predictions_probabilities):
+        log.debug(f'{__class__.__name__}')
+        log.debug(f"Predicting probabilities on {tcga} cohort ..")
+        log.debug(f"Adding key `{tcga}_prob` to self.predictions")
+        self[f"{tcga}_prob"] = tcga_predictions_probabilities
+
+    def merge_predictions_cancer_datasets(self, tcga, tcga_data):
+        log.debug(f'{__class__.__name__}')
+        log.debug(f"Merging predictions with {tcga} cancer dataset ..")
+        tcga_predicted_probs_datasets = []
+        for exp in range(self.n_experiment):
+            tcga_predicted_probs_data = tcga_data.copy(deep=True)
+            # Insert predictions probability of class 0 array values into data as first (0th) column.
+            tcga_predicted_probs_data.insert(0, 'Predictions', self[f"{tcga}_prob"][exp][:, 0])
+            tcga_predicted_probs_datasets.append(tcga_predicted_probs_data)
+
+        self[f"{tcga}_predicted_probs_datasets"] = tcga_predicted_probs_datasets
+
+    def post_process_predictions(self, tcga, tcga_datasets):
+        log.debug(f'{__class__.__name__}')
+        log.debug(f"Post processing predictions for cohort {tcga} ..")
+
+        self.merge_predictions_cancer_datasets(
+            tcga, tcga_datasets
+        )
+
+        tcga_predicted_valid_datasets = []
+        tcga_predicted_invalid_datasets = []
+        for exp in tqdm(range(self.n_experiment)):
+            isomer_converted_data = convert_primary_isomer(
+                column_name="Interactor_UniProt_ID",
+                data=self[f"{tcga}_predicted_probs_datasets"][exp]
+            )
+            predicted_valid_data, predicted_invalid_data = drop_invalid_predicted_probs_entries(
+                isomer_converted_data
+            )
+
+            tcga_predicted_valid_datasets.append(predicted_valid_data)
+            tcga_predicted_invalid_datasets.append(predicted_invalid_data)
+
+        self[f"{tcga}_predicted_valid_datasets"] = tcga_predicted_valid_datasets
+        self[f"{tcga}_predicted_invalid_datasets"] = tcga_predicted_invalid_datasets
+        log.debug(f"Preparing finalized prediction datasets for {tcga} ..")
+        self.prepare_finalized_prediction_datasets(tcga, tcga_predicted_valid_datasets)
+        log.debug(f"Post processing completed for {tcga}.")
+
+    def prepare_ensemble_prediction_data(self, tcga, tcga_data):
+        # FIXME: REFORMATTING ...
+        log.debug(f'{__class__.__name__}')
+        log.debug(f"Preparing ensemble prediction data for {tcga} ..")
+        tcga_ensemble_prediction_data = get_triplet_columns(tcga_data)
+        tcga_ensemble_prediction_data = convert_primary_isomer(
+            "Interactor_UniProt_ID", tcga_ensemble_prediction_data
+        )
+
+        tcga_ensemble_prediction_data.drop_duplicates(keep="first", inplace=True)
+        tcga_ensemble_prediction_data.reset_index(drop=True, inplace=True)
+
+        tcga_ensemble_prediction_data = add_voted_probs(
+            tcga_ensemble_prediction_data, self[f"{tcga}_finalized_prediction_dataframes"]
+        )
+
+        tcga_predictions_prob_data = remove_triplet_columns(tcga_ensemble_prediction_data)
+
+        tcga_predictions_prob_data['PROB_0s_AVG'] = tcga_predictions_prob_data.apply(
+            take_avg, axis=1
+        )
+
+        tcga_predictions_prob_data['VOTED_PREDICTION'] = (
+            (tcga_predictions_prob_data['PROB_0s_AVG'] >= 0.50).astype('int')
+        )
+
+        self[f"{tcga}_predictions_prob_data"] = tcga_predictions_prob_data
+        log.debug(f"Prediction probabilities data for {tcga} is prepared."
+                  f"Accessible from `{tcga}_predictions_prob_data`.")
+
+        tcga_ensemble_prediction_data['VOTED_PREDICTION'] = tcga_predictions_prob_data['VOTED_PREDICTION']
+
+        self[f"{tcga}_ensemble_prediction_data"] = tcga_ensemble_prediction_data
+        log.debug(f"Ensemble prediction data for {tcga} is prepared."
+                  f"Accessible from `{tcga}_ensemble_prediction_data`.")
+
+        tcga_prediction_results = get_triplet_columns(tcga_ensemble_prediction_data)
+        tcga_prediction_results['VOTED_PREDICTION'] = tcga_ensemble_prediction_data['VOTED_PREDICTION']
+        self[f"{tcga}_prediction_results"] = tcga_prediction_results
+        log.debug(f"Resulting prediction data is available for {tcga}.\n"
+                  f"Accessible from predictions.['{tcga}_prediction_results']")
+
