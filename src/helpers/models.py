@@ -39,7 +39,7 @@ class FinalizedModels(list):
                           data_materials[f"ys"][exp])
 
 
-class EnsambledVotingClassifier:
+class EnsembleVotingClassifier:
     def __init__(self, models, voting):
         log.debug("Initializing EnsambledVotingClassifier.")
         log.debug(f"Voting mode: {voting}")
@@ -57,7 +57,17 @@ class EnsambledVotingClassifier:
         return tcga_predictions
 
     def predict_soft_voting(self, Xs):
-        raise NotImplementedError
+        tcga_predictions_probabilities = []
+        for estimator, X in zip(self.models, Xs):
+            log.debug(f"Current estimator: {estimator}")
+            log.debug(f"X shape: {X.shape}")
+            prediction_probability = estimator.predict_proba(X)
+            # Ensure classes are in following order so that the first probabilities
+            # belonging to class 0, and second probabilities belonging to class 1.
+            assert list(estimator.classes_) == [0, 1]
+            tcga_predictions_probabilities.append(prediction_probability)
+
+        return tcga_predictions_probabilities
 
     def predict(self, Xs):
         if self.voting == "hard":
@@ -68,9 +78,3 @@ class EnsambledVotingClassifier:
             raise ValueError(f"Invalid attribute. Expected self.voting values are "
                              f"`hard` and `soft`, got {self.voting}")
 
-        # for exp in range(self.n_experiment):
-        #     X = self.data_materials[f"Xs_{tcga}"][exp]
-        #     prediction = self.ensambled_voting_classifier.predict(X)
-        #     tcga_predictions.append(prediction)
-        #
-        # return prediction
