@@ -24,9 +24,9 @@ from helpers.evaluation import EvaluationMetrics, EvaluationValid
 
 from helpers.fine_tuning import FineTuner
 
-from helpers.predictions import Predictions
+from helpers.predictions import predictions_object
 
-from helpers.models import DefaultModels, TunedModels, FinalizedModels, EnsambledVotingClassifier
+from helpers.models import DefaultModels, TunedModels, FinalizedModels, EnsembleVotingClassifier
 
 from helpers.mylogger import get_handler
 import logging
@@ -101,7 +101,7 @@ class Predator:
         self.eval_metrics = None
         self.fine_tuner = None
 
-        self.ensambled_voting_classifier = None
+        self.ensemble_voting_classifier = None
         self.predictions = None
 
         # variant = spsm
@@ -132,31 +132,6 @@ class Predator:
             show_confusion_matrix=show_confusion_matrix,
             determined_features=self.determined_features
         )
-        # if models_type == "default":
-        #     classifiers = [get_default_classifier()] * self.n_experiment
-        # elif models_type == "tuned":
-        #     # TODO
-        #     classifiers = [get_default_classifier()] * self.n_experiment
-        #     # classifiers = self.classifiers
-        # else:
-        #     raise ValueError("Invalid arg for `models_type`.")
-        #
-        # log.debug("Evaluating on validation data ..")
-        # accuracy_scores = []
-        # balanced_accuracy_scores = []
-        # for i in tqdm(range(self.n_experiment)):
-        #     print("-------- EXPERIMENT: {:>2} --------".format(i + 1))
-        #     acc_score, balan_acc_score = evaluate_valid(
-        #         classifiers[i],
-        #         self.data_materials["Xs_train"][i],
-        #         self.data_materials["ys_train"][i],
-        #         self.data_materials["Xs_valid"][i],
-        #         self.data_materials["ys_valid"][i],
-        #         show_confusion_matrix=confusion_matrix,
-        #     )
-        #     accuracy_scores.append(acc_score)
-        #     balanced_accuracy_scores.append(balan_acc_score)
-        #     print("================================")
 
     def init_shap_feature_selector(self, shap_top_ns):
         self.shap_feature_selector = ShapFeatureSelector(self.n_experiment, shap_top_ns)
@@ -208,46 +183,31 @@ class Predator:
 
     def predict(self, voting="hard"):
         log.debug("Predicting on cancer datasets ..")
-        self.ensambled_voting_classifier = EnsambledVotingClassifier(
+        self.ensemble_voting_classifier = EnsembleVotingClassifier(
             self.finalized_models, voting=voting
         )
-        self.predictions = Predictions(self.n_experiment)
+
+        self.predictions = predictions_object(voting, self.n_experiment)
+
         for tcga in self.tcga_cohorts:
             log.debug(f"Predicting on {tcga} cohort ..")
-            tcga_predictions = self.ensambled_voting_classifier.predict(
+            tcga_predictions = self.ensemble_voting_classifier.predict(
                 self.data_materials[f"Xs_{tcga}"]
             )
             self.predictions.add_predictions(tcga, tcga_predictions)
 
-        log.debug("Predictions completed.")
-        log.debug(f"Predictions are available from predator.predictions.keys().")
-
     def predictions_post_process(self):
         for tcga in self.tcga_cohorts:
-            self.predictions.merge_predictions_cancer_datasets(
-                tcga, self.data_materials[f"{tcga}"]
+            self.predictions.post_process_predictions(
+                tcga,
+                self.data_materials[f"{tcga}"]
             )
-            self.predictions.post_process_predictions(tcga)
 
-    def prepare_ensambled_prediction_data(self):
+    def prepare_ensemble_prediction_data(self):
         for tcga in self.tcga_cohorts:
-            self.predictions.prepare_ensambled_prediction_data(
+            self.predictions.prepare_ensemble_prediction_data(
                 tcga, self.data_materials[f"{tcga}"]
             )
-
-
-
-    # def prepare_feature_selected_data_materials(self, shap_top_n: int):
-    #     log.debug("preparing data materials for ML ..")
-    #     for i in tqdm(range(self.n_experiment)):
-    #         self.data_materials_ML.append_feature_selected_data_materials(shap_top_n)
-    #         data_materials = prepare_data_machine_learning(
-    #             self.sampled_train_data_list[i], random_seed=self.random_seeds[i]
-    #         )
-
-    # def evaluation_metrics(self):
-    #     # second thought, it's not needed.
-    #     raise NotImplementedError
 
 #
 # predator = Predator(project_common_file_dir=PROJECT_COMMON_FILE_DIR,
