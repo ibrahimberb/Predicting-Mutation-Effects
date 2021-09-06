@@ -96,6 +96,12 @@ def get_prediction_entry(protein, mutation, interactor, data):
 
 
 def get_prediction_entry_prob(row, data):
+    """
+    Returns the probability of being class 1.
+    :param row:
+    :param data:
+    :return:
+    """
     prediction_probs_array = data[
         (data['UniProt_ID'] == row['UniProt_ID']) &
         (data['Mutation'] == row['Mutation']) &
@@ -110,7 +116,7 @@ def get_prediction_entry_prob(row, data):
 
     # Prediction array contains one element, and return that element.
     elif len(prediction_probs_array) == 1:
-        [prediction] = prediction_probs_array  # extracting probability of class 0
+        [prediction] = prediction_probs_array  # extracting probability of class 1
         return prediction
 
     # Prediction array contains more elements, but they should be on the same probability intervals

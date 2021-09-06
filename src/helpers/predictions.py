@@ -279,8 +279,8 @@ class PredictionsSoft(Predictions):
         tcga_predicted_probs_datasets = []
         for exp in range(self.n_experiment):
             tcga_predicted_probs_data = tcga_data.copy(deep=True)
-            # Insert predictions probability of class 0 array values into data as first (0th) column.
-            tcga_predicted_probs_data.insert(0, 'Predictions', self[f"{tcga}_prob"][exp][:, 0])
+            # Insert predictions probability of class 1 array values into data as first (0th) column.
+            tcga_predicted_probs_data.insert(0, 'Predictions', self[f"{tcga}_prob"][exp][:, 1])
             tcga_predicted_probs_datasets.append(tcga_predicted_probs_data)
 
         self[f"{tcga}_predicted_probs_datasets"] = tcga_predicted_probs_datasets
@@ -331,13 +331,23 @@ class PredictionsSoft(Predictions):
 
         tcga_predictions_prob_data = remove_triplet_columns(tcga_ensemble_prediction_data)
 
-        tcga_predictions_prob_data['PROB_0s_AVG'] = tcga_predictions_prob_data.apply(
+        tcga_predictions_prob_data['PROB_1s_AVG'] = tcga_predictions_prob_data.apply(
             take_avg, axis=1
         )
 
+        # If probability of being class 1 is greater than or equal to 0.50,
+        # it is assigned as class 1.
         tcga_predictions_prob_data['VOTED_PREDICTION'] = (
-            (tcga_predictions_prob_data['PROB_0s_AVG'] >= 0.50).astype('int')
+            (tcga_predictions_prob_data['PROB_1s_AVG'] >= 0.50).astype('int')
         )
+
+        # tcga_predictions_prob_data['VOTED_PREDICTION'] = tcga_predictions_prob_data['PROB_0s_AVG'].apply(
+        #     convert_prob_to_class, axis=1
+        # )
+
+        # tcga_predictions_prob_data['VOTED_PREDICTION'] = (
+        #     (tcga_predictions_prob_data['PROB_0s_AVG'] >= 0.50).astype('int')
+        # )
 
         self[f"{tcga}_predictions_prob_data"] = tcga_predictions_prob_data
         log.debug(f"Prediction probabilities data for {tcga} is prepared."

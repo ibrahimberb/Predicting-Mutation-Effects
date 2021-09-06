@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List
 
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -97,6 +97,3 @@ def visualize_distribution_top_n_features(shap_feature_selector, top_n):
     sns.despine(right=True)
 
     plt.show()
-
-
-
