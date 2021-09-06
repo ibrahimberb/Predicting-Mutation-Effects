@@ -112,12 +112,12 @@ class DataMaterials(dict):
         log.debug("Initializing target data materials ..")
         log.debug(f"Determined features: {determined_features}")
         for tcga_code_path_pair in tcga_code_path_pairs:
-            tcga_name, tcga_path = tcga_code_path_pair
-            tcga_name = tcga_name.lower()
-            log.debug(f"Declaring Xs_{tcga_name} data materials  ..")
+            tcga, tcga_path = tcga_code_path_pair
+            tcga = tcga.lower()
+            log.debug(f"Declaring Xs_{tcga} data materials  ..")
             Xs_tcga = []
             for _ in range(self.n_experiment):
                 Xs_tcga.append(
-                    self[f"target_{tcga_name}_data"][determined_features].copy(deep=True)
+                    self[f"target_{tcga}_data"][determined_features].copy(deep=True)
                 )
-            self[f"Xs_{tcga_name}"] = Xs_tcga
+            self[f"Xs_{tcga}"] = Xs_tcga
