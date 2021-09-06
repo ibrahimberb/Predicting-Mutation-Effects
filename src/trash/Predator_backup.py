@@ -22,10 +22,10 @@ log = logging.Logger("debug_runner", level=logging.INFO)
 log.addHandler(ColorHandler())
 
 # PATHS
-PROJECT_COMMON_FILE_DIR = Path("../data/")
+PROJECT_COMMON_FILE_DIR = Path("../../data/")
 MUTATIONS_PATH = Path("training_data_M1.txt")
-INITIAL_COLUMNS_PATH = Path("../data/initial_columns_59.csv")
-BRCA_PATH = Path("../data/BRCA_INTERFACE_A2.txt")
+INITIAL_COLUMNS_PATH = Path("../../data/initial_columns_59.csv")
+BRCA_PATH = Path("../../data/BRCA_INTERFACE_A2.txt")
 
 TCGA_CODE = str
 
