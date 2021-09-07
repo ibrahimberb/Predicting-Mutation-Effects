@@ -4,14 +4,14 @@ from pathlib import Path
 
 from tqdm.notebook import tqdm
 
-from helpers.data_sampling import prepare_data_spsm
+from helpers.helpers_predator.data_sampling import prepare_data_spsm
 
-from helpers.paths import Paths
+from helpers.helpers_predator.paths import Paths
 
 # from helpers.data_materials import DataMaterialsML
-from helpers.data_materials import DataMaterials
+from helpers.helpers_predator.data_materials import DataMaterials
 
-from helpers.feature_selection import ShapFeatureSelector
+from helpers.helpers_predator.feature_selection import ShapFeatureSelector
 
 # from helpers.data_materials import initialize_data_materials_ML
 # from helpers.data_materials import append_data_materials
@@ -20,13 +20,13 @@ from helpers.feature_selection import ShapFeatureSelector
 
 # from .helpers.feature_selection import
 
-from helpers.evaluation import EvaluationMetrics, EvaluationValid
+from helpers.helpers_predator.evaluation import EvaluationMetrics, EvaluationValid
 
-from helpers.fine_tuning import FineTuner
+from helpers.helpers_predator.fine_tuning import FineTuner
 
-from helpers.predictions import predictions_object
+from helpers.helpers_predator.predictions import predictions_object
 
-from helpers.models import DefaultModels, TunedModels, FinalizedModels, EnsembleVotingClassifier
+from helpers.helpers_predator.models import DefaultModels, TunedModels, FinalizedModels, EnsembleVotingClassifier
 
 from helpers.mylogger import get_handler
 import logging
@@ -135,16 +135,16 @@ class Predator:
 
     def init_shap_feature_selector(self, shap_top_ns):
         self.shap_feature_selector = ShapFeatureSelector(self.n_experiment, shap_top_ns)
-        self.shap_feature_selector.load_shap_values(self.data_materials)
+        self.shap_feature_selector.load_shap_values(self.data_materials)  # fixme -> select_features
         self.shap_feature_selector.get_selected_features(self.data_materials)
 
     def aggregate_selected_features(self, method):
-        self.shap_feature_selector.aggregate_selected_features(method)
+        self.shap_feature_selector.shap_aggregate_selected_features(method)
         for shap_top_n, aggregated_feature in self.shap_feature_selector.n_features_to_aggregated_features.items():
             self.data_materials.initialize_feature_selected_data_materials(shap_top_n)
             self.data_materials.append_feature_selected_data_materials(shap_top_n, aggregated_feature)
 
-    def initialize_evalutation_metrics(self):
+    def initialize_evaluation_metrics(self):
         self.eval_metrics = EvaluationMetrics(self.n_experiment, self.data_materials, self.shap_feature_selector)
 
     def set_determined_feature_set(self, feature_set: str):
