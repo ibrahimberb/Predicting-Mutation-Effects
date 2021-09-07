@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from .displayers import display_labels
 
-from .mylogger import get_handler
+from ..mylogger import get_handler
 import logging
 
 handler = get_handler()

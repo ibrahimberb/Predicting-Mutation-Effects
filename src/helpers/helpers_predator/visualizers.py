@@ -4,7 +4,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-from .mylogger import get_handler
+from ..mylogger import get_handler
 import logging
 
 handler_simple = get_handler('simple')

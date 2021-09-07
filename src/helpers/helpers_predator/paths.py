@@ -1,4 +1,4 @@
-from .mylogger import get_handler
+from ..mylogger import get_handler
 import logging
 
 handler = get_handler()

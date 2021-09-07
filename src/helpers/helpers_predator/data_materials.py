@@ -5,7 +5,7 @@ from .prepare_data_for_ML import prepare_data_machine_learning
 
 from tqdm.notebook import tqdm
 
-from .mylogger import get_handler
+from ..mylogger import get_handler
 import logging
 
 handler = get_handler()

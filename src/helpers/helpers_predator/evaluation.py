@@ -13,7 +13,7 @@ import seaborn as sns
 from matplotlib.ticker import MultipleLocator
 from matplotlib import pyplot as plt
 
-from .mylogger import get_handler
+from ..mylogger import get_handler
 import logging
 
 handler = get_handler()
@@ -135,6 +135,7 @@ class EvaluationMetrics:
         plt.ylabel('Metrics', fontsize=16, fontweight='bold')
         plt.xlabel('Scores', fontsize=16, fontweight='bold')
         plt.axhline(y=0.5, color='k', linestyle='--', alpha=0.8, lw=0.5)
+        # noinspection SpellCheckingInspection
         ax = sns.boxplot(x='METRIC', y='SCORE', hue='FEATURES', data=self.scoring_metrics_data_melted,
                          palette='Pastel1')  # bone, vlag, cividis, #03012d, light:#444452
         ax.xaxis.set_minor_locator(MultipleLocator(0.5))
@@ -222,6 +223,8 @@ class EvaluationValid:
             raise ValueError("Invalid arg for `models_type`.")
 
     def comparison_default_vs_tuned(self, kind='box'):
+        sns.set_theme(style="ticks", palette="twilight_shifted_r", font_scale=1.15)
+        # sns.set(style="ticks", font_scale=1.15)  # white, dark, whitegrid, darkgrid, ticks
         df_1 = pd.DataFrame({
             "Acc_scores": self.scores["initial_scoring"]["acc_scores"],
             "Balan_acc_scores": self.scores["initial_scoring"]["balan_acc_scores"],

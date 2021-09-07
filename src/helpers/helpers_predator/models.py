@@ -1,5 +1,5 @@
 from .machine_learning_utils import get_default_classifier
-from .mylogger import get_handler
+from ..mylogger import get_handler
 import logging
 from tqdm.notebook import tqdm
 from sklearn.base import clone

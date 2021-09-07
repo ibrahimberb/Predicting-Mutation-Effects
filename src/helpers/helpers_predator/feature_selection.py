@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from typing import List, Dict
+
 from .data_materials import DataMaterials
-from tqdm.notebook import tqdm
 from .machine_learning_utils import get_default_classifier
 
+from tqdm.notebook import tqdm
 from collections import defaultdict
 
 from pandas import DataFrame
@@ -13,7 +14,7 @@ import pandas as pd
 
 import shap
 
-from .mylogger import get_handler
+from ..mylogger import get_handler
 import logging
 
 handler = get_handler()
@@ -30,10 +31,9 @@ log_simple.addHandler(handler_simple)
 log_simple.setLevel(logging.DEBUG)
 
 
-# ## i was here.
 @dataclass
 class FeatureAggregationMethods:
-    OCCURRANCE = 'occurrance'
+    OCCURRENCE = 'occurrence'
     CONCORDANCE = 'concordance'
 
 
@@ -56,7 +56,7 @@ class ShapFeatureSelector:
         self.n_features_to_aggregated_features = None
 
     def load_shap_values(self, data_materials: DataMaterials):
-        """Fitted on trainsets, not on all train data."""
+        """Fitted on train sets, not on all train data."""
         log.debug("Loading ShapFeatureSelector ..")
         shap_values_train_list = []
         for i in tqdm(range(self.n_experiment)):
@@ -89,7 +89,7 @@ class ShapFeatureSelector:
                 print(f"{selected_features}\n")
                 self.n_features_to_selected_features_list[top_n].append(selected_features)
 
-    def aggregate_selected_features(self, method):
+    def shap_aggregate_selected_features(self, method):
         self.aggregated_feature_selector = AggregatedFeatureSelector(self.n_features_to_selected_features_list, method)
         self.aggregated_feature_selector.aggregate()
         self.n_features_to_aggregated_features = self.aggregated_feature_selector.n_features_to_aggregated_features
@@ -105,27 +105,11 @@ class ShapFeatureSelector:
 
         return data.head()
 
-    # def init_shap_feature_selector(self, data_materials: DataMaterials):
-    #     self.load_shap_values(data_materials)
-    #     self.print_selected_features(data_materials)
-
-    # def append_top_n_features(self, data_materials: DataMaterials):
-    #     log.debug("Appending feature datasets with selected columns to data_materials ..")
-    #     for exp in range(self.n_experiment):
-    #         for top_n in self.shap_top_ns:
-    #             shap_values = self.shap_values_train_list[exp][1]
-    #             features_data = data_materials["Xs_train"][exp]
-    #             top_n_features = self.get_selected_features_single_data(shap_values, features_data, top_n=top_n)
-    #             data_materials[f"Xs_train_shap_{self.shap_top_ns}"].append(
-    #                 features_data[top_n_features]
-    #             )
-
     def select_features(self, data_materials: DataMaterials):
         self.load_shap_values(data_materials)
-        # self.append_top_n_features(data_materials)
 
 
-class AggregatedFeatureSelector:  # fixme ↓
+class AggregatedFeatureSelector:
     def __init__(self, n_features_to_selected_features_list: Dict[int, List[List[str]]], aggregation_method=None):
         self.aggregation_method = aggregation_method
         self.n_features_to_selected_features_list = n_features_to_selected_features_list
@@ -133,10 +117,14 @@ class AggregatedFeatureSelector:  # fixme ↓
         self.n_features_to_selected_features_occurrences_counts = defaultdict(dict)
 
     def aggregate(self):
-        if self.aggregation_method == FeatureAggregationMethods.OCCURRANCE:
-            self.n_features_to_aggregated_features = self.aggregate_occurrance()
+        if self.aggregation_method == FeatureAggregationMethods.OCCURRENCE:
+            self.n_features_to_aggregated_features = self.aggregate_occurrence()
 
-    def aggregate_occurrance(self) -> Dict[int, list]:
+        else:
+            log.critical("Aggregation method not recognized.")
+            raise ValueError(f"Invalid Aggregation method: {self.aggregation_method}")
+
+    def aggregate_occurrence(self) -> Dict[int, list]:
         top_n_to_frequently_occurred_features = {}
         for top_n, features_list in self.n_features_to_selected_features_list.items():
             selected_features_to_occurrences = defaultdict(int)
@@ -144,7 +132,7 @@ class AggregatedFeatureSelector:  # fixme ↓
                 for feature in features:
                     selected_features_to_occurrences[feature] += 1
 
-            # Sorting the counts dictionary by value in desending order.
+            # Sorting the counts dictionary by value in descending order.
             frequently_occurred_features = sorted(selected_features_to_occurrences,
                                                   key=selected_features_to_occurrences.get, reverse=True)[:top_n]
             top_n_to_frequently_occurred_features[top_n] = frequently_occurred_features

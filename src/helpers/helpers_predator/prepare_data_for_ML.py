@@ -22,8 +22,8 @@ def get_label_proportions_data(data_prepared, strat_valid_set, random_valid_set)
 # FIXME: prepare *train* data for machine learning
 def prepare_data_machine_learning(data, random_seed):
     """
+
     :param data:
-    :param study:
     :param random_seed:
     :return:
     """

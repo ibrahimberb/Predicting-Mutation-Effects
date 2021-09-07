@@ -1,8 +1,10 @@
-from typing import List, Union
+from typing import List
+
+import seaborn as sns
 
 import pandas as pd
 from pandas import DataFrame
-from .mylogger import get_handler
+from ..mylogger import get_handler
 from .predictions_utils import (
     get_predictive_columns_removed_data,
     max_votes,
@@ -65,6 +67,7 @@ class Predictions(dict):
         self.predictions_distributions_per_exp[tcga] = predictions_distributions
 
     def plot_distributions(self, tcga):
+        sns.set(style="white", font_scale=1.15)
         predictions_distributions_data = self.predictions_distributions_per_exp[tcga].copy()
         predictions_distributions_data = (
             predictions_distributions_data
@@ -179,6 +182,7 @@ class Predictions(dict):
             datasets[exp].drop_duplicates(keep="first", inplace=True)
 
     def plot_ensemble_prediction_distribution(self, tcga):
+        log.warning(self[f"{tcga}_ensemble_prediction_data"].columns)
         voted_predictions = self[f"{tcga}_ensemble_prediction_data"]['VOTED_PREDICTION']
         voted_predictions.value_counts().plot(kind="bar")
         plt.title(f'Distribution of predictions for {tcga}')
@@ -218,6 +222,10 @@ class PredictionsHard(Predictions):
         log.debug(f"Ensemble prediction data for {tcga} is prepared.")
         self[f"{tcga}_prediction_results"] = tcga_ensemble_prediction_data.drop(
             ["Num_preds_0", "Num_preds_1", "Num_preds_NO_VOTE"], axis='columns'
+        )
+        # Rename "VOTED_PREDICTION" column to "PREDICTION"
+        self[f"{tcga}_prediction_results"] = self[f"{tcga}_prediction_results"].rename(
+            columns={'VOTED_PREDICTION': 'PREDICTION'}
         )
         log.debug(f"Resulting prediction data is available for {tcga}.\n"
                   f"Accessible from predictions.['{tcga}_prediction_results']")
@@ -360,7 +368,7 @@ class PredictionsSoft(Predictions):
                   f"Accessible from `{tcga}_ensemble_prediction_data`.")
 
         tcga_prediction_results = get_triplet_columns(tcga_ensemble_prediction_data)
-        tcga_prediction_results['VOTED_PREDICTION'] = tcga_ensemble_prediction_data['VOTED_PREDICTION']
+        tcga_prediction_results['PREDICTION'] = tcga_ensemble_prediction_data['VOTED_PREDICTION']
         self[f"{tcga}_prediction_results"] = tcga_prediction_results
         log.debug(f"Resulting prediction data is available for {tcga}.\n"
                   f"Accessible from predictions.['{tcga}_prediction_results']")

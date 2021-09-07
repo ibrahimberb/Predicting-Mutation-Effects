@@ -4,7 +4,7 @@ from pandas import DataFrame
 import pandas as pd
 import numpy as np
 
-from .mylogger import get_handler
+from ..mylogger import get_handler
 import logging
 
 from tqdm.notebook import tqdm
@@ -39,6 +39,19 @@ def get_predictive_columns_removed_data(data: DataFrame) -> DataFrame:
 
 
 def max_votes(x):
+    """
+    Return the maximum occurrence of predicted class.
+
+    Notes
+    -----
+        If number of class 0 prediction is equal to number of class 1 predictions, NO_VOTE will be returned.
+        E.g.
+            Num_preds_0 = 25,
+            Num_preds_1 = 25,
+            Num_preds_NO_VOTE = 0,
+            returned vote : "NO_VOTE".
+
+    """
     if x['Num_preds_0'] > x['Num_preds_1'] and x['Num_preds_0'] > x['Num_preds_NO_VOTE']:
         return 0
     elif x['Num_preds_1'] > x['Num_preds_0'] and x['Num_preds_1'] > x['Num_preds_NO_VOTE']:
