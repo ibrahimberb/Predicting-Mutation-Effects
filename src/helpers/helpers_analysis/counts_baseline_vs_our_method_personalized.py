@@ -8,13 +8,15 @@ from .is_in_elaspic import is_in_elaspic
 from collections import defaultdict
 
 
-def counts_baseline_vs_our_method_personalized(proteins: list, patients: list,
-                                               snv_data: pd.DataFrame,
-                                               elaspic_core_data: pd.DataFrame,
-                                               elaspic_interface_data: pd.DataFrame, prediction_data: pd.DataFrame,
-                                               add_core_flag_1_case_dict: dict):
+def counts_baseline_vs_our_method_personalized(
+        proteins: list, patients: list,
+        snv_data: pd.DataFrame,
+        elaspic_core_data: pd.DataFrame,
+        elaspic_interface_data: pd.DataFrame, prediction_data: pd.DataFrame,
+        add_core_flag_1_case_dict: dict
+):
     """
-    Generates protein counts for BASELINE and OUR_METHOD. 
+    Generates personalized protein counts for BASELINE and OUR_METHOD.
 
     Parameters
     ----------
@@ -53,7 +55,7 @@ def counts_baseline_vs_our_method_personalized(proteins: list, patients: list,
     """
 
     if add_core_flag_1_case_dict:
-        print('Adding ELASPIC Degree when `core_flag=1`')
+        print('Adding ELASPIC Degree when `core_flag=1`')  # TODO
 
     else:
         print('Adding +0 when `core_flag=1`')
