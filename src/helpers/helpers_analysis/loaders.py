@@ -23,7 +23,7 @@ log.setLevel(logging.DEBUG)
 
 class ReferenceDataset:
     CANCERMINE = 'cancermine'
-    CGC = 'CGC'
+    CGC = 'cgc'
 
 
 
@@ -85,14 +85,10 @@ def load_elaspic_core_and_interface_combined_data(tcga, core_data, interface_dat
     log.debug(f"\nELASPIC CORE DATA"
               f"\n{core_data.shape}"
               f"\n{core_data.head(3)}")
-    # log.debug(core_data.shape)
-    # log.debug(f"\n{core_data.head(3)}")
 
     log.debug(f'\nELASPIC INTERFACE DATA'
               f'\n{interface_data.shape}'
               f'\n{interface_data.head(3)}')
-    # log.debug(interface_data.shape)
-    # log.debug(f"\n{interface_data.head(3)}")
 
     tcga_elaspic_core_and_interface_data = pd.concat([core_data, interface_data])
 
@@ -142,6 +138,13 @@ def load_reference_dataset(
 
         log.info(f"{reference_data_name} reference datasets loaded.")
 
+    elif reference_data_name == ReferenceDataset.CGC:
+        load_cgc_genes_cohort(reference_data_spec_cohort_path, data_materials, cohort=tcga)
+        load_cgc_genes_cohort(reference_data_path, data_materials, cohort='all')
+
+    else:
+        raise ValueError(f"Invalid name `{reference_data_name}`")
+
 
 def load_cancermine_genes_cohort(reference_data_path, data_materials, cohort):
     log.debug(f"Loading Cancermine reference dataset cohort {cohort} ..")
@@ -153,3 +156,16 @@ def load_cancermine_genes_cohort(reference_data_path, data_materials, cohort):
     log.debug(f"First five genes: {cancermine_genes[:5]}")
 
     data_materials[f"cancermine_{cohort}_genes"] = cancermine_genes
+
+
+# fixme: refactor (duplicated code: genes txt files are in the same format, so we can use the same function.)
+def load_cgc_genes_cohort(reference_data_path, data_materials, cohort):
+    log.debug(f"Loading CGC reference dataset cohort {cohort} ..")
+
+    with open(reference_data_path, 'r') as genes_file:
+        cgc_genes = [line.strip() for line in genes_file.readlines()]
+
+    log.debug(f"Number of genes: {len(cgc_genes)}")
+    log.debug(f"First five genes: {cgc_genes[:5]}")
+
+    data_materials[f"cgc_{cohort}_genes"] = cgc_genes
