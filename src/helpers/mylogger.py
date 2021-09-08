@@ -49,6 +49,18 @@ formatter_simple = ColoredFormatter(
     }
 )
 
+formatter_module = ColoredFormatter(
+    '{asctime} |{color} {levelname:8} {reset}| {name} | {message}',
+    style='{', datefmt='%Y-%m-%d %H:%M:%S',
+    colors={
+        'DEBUG': Fore.CYAN,
+        'INFO': Fore.GREEN,
+        'WARNING': Fore.YELLOW,
+        'ERROR': Fore.RED,
+        'CRITICAL': Fore.RED + Back.WHITE + Style.BRIGHT,
+    }
+)
+
 
 def get_handler(log_type='default'):
     if log_type == 'default':
@@ -57,6 +69,9 @@ def get_handler(log_type='default'):
     elif log_type == 'simple':
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(formatter_simple)
+    elif log_type == 'module':
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(formatter_module)
     else:
         raise ValueError('Invalid log_type, must be either `default` or `simple`.')
 
