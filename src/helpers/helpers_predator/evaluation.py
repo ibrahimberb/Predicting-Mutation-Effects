@@ -13,6 +13,8 @@ import seaborn as sns
 from matplotlib.ticker import MultipleLocator
 from matplotlib import pyplot as plt
 
+from IPython.display import display
+
 from ..mylogger import get_handler
 import logging
 
@@ -126,21 +128,39 @@ class EvaluationMetrics:
         self.scoring_metrics_data = pd.concat(dataframes, axis='columns')
 
     def plot_performance_comparison_results(self):
-        sns.set_theme(style="ticks", palette="pastel", font_scale=1.5)
+        # sns.set_theme(style="ticks", palette="pastel", font_scale=1.5)  # TODO: POSTER,uncommendLATER
+        sns.set_theme(style="ticks", palette="pastel", font_scale=1.65)
         # TODO: [later] plot size adjusting itself depending on input ↓
         plt.figure(figsize=(20 + len(self.benchmark_columns), 7))
-        title_string_1 = fr"Performance\ Comparison\ of\ Selected\ Features\ vs.\ All\ Features"
-        title_string_2 = fr"CV = 10, CV\_repeat = {self.n_repeats}, Experiment\_repeat = {self.n_experiment}"
-        plt.title(f"$\mathbf{{{title_string_1}}}$ \n $\mathbf{{{title_string_2}}}$", fontsize=16, fontweight='bold')
-        plt.ylabel('Metrics', fontsize=16, fontweight='bold')
-        plt.xlabel('Scores', fontsize=16, fontweight='bold')
+        # title_string_1 = fr"Performance\ Comparison\ of\ Selected\ Features\ vs.\ All\ Features"
+        # title_string_2 = fr"CV = 10, CV\_repeat = {self.n_repeats}, Experiment\_repeat = {self.n_experiment}"
+        title_string_1 = fr"Performance\ Comparison\ of\ Selected\ Features"
+        title_string_2 = ""
+        plt.title(f"$\mathbf{{{title_string_1}}}$ \n $\mathbf{{{title_string_2}}}$", fontsize=24, fontweight='bold')
+        plt.ylabel('Metrics', fontsize=24, fontweight='bold')
+        plt.xlabel('Scores', fontsize=24, fontweight='bold')
         plt.axhline(y=0.5, color='k', linestyle='--', alpha=0.8, lw=0.5)
         # noinspection SpellCheckingInspection
+
+        scoring_metrics_data_melted_less_metrics = self.scoring_metrics_data_melted[
+            self.scoring_metrics_data_melted['METRIC'].isin(
+                ['accuracy', 'balanced_accuracy', 'f1', 'precision', 'recall',
+                 'roc_auc']
+            )]
+
+        # ax = sns.boxplot(x='METRIC', y='SCORE', hue='FEATURES', data=scoring_metrics_data_melted_less_metrics,
+        #                  palette='Pastel1')  # bone, vlag, cividis, #03012d, light:#444452
+
         ax = sns.boxplot(x='METRIC', y='SCORE', hue='FEATURES', data=self.scoring_metrics_data_melted,
                          palette='Pastel1')  # bone, vlag, cividis, #03012d, light:#444452
         ax.xaxis.set_minor_locator(MultipleLocator(0.5))
         ax.xaxis.grid(True, which='minor', color='#ababab', lw=1)
-        plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
+        # legend = plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5), edgecolor="black") ############
+        # legend.get_frame().set_alpha(None)
+        ###################
+        plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5), framealpha=0)
+        # plt.tight_layout()  # poster purpose
+        # plt.savefig('foo2.png')  # poster purpose
         plt.show()
         # sns.despine(offset=10, trim=True)
 
@@ -151,12 +171,14 @@ class EvaluationValid:
             n_experiment,
             data_materials,
             default_models=None,
-            tuned_models=None
+            tuned_models=None,
+            qualified_models=None
     ):
         self.n_experiment = n_experiment
         self.data_materials = data_materials
         self.default_models = default_models
         self.tuned_models = tuned_models
+        self.qualified_models = qualified_models
         self.scores = {}
         self.comparison_data = None
 
@@ -178,7 +200,8 @@ class EvaluationValid:
             self,
             classifiers,
             show_confusion_matrix=False,
-            determined_features=None):
+            determined_features=None
+    ):
         acc_scores = []
         balan_acc_scores = []
         for exp in tqdm(range(self.n_experiment)):
@@ -222,27 +245,57 @@ class EvaluationValid:
         else:
             raise ValueError("Invalid arg for `models_type`.")
 
-    def comparison_default_vs_tuned(self, kind='box'):
+    def comparison_models(self, kind='box'):
+        """
+        Comparison of following models:
+            1. Default Models
+            2. Tuned Models
+            3. Qualified Models
+        """
         sns.set_theme(style="ticks", palette="twilight_shifted_r", font_scale=1.15)
         # sns.set(style="ticks", font_scale=1.15)  # white, dark, whitegrid, darkgrid, ticks
         df_1 = pd.DataFrame({
+            "Experiment": [e for e in range(self.n_experiment)],
             "Acc_scores": self.scores["initial_scoring"]["acc_scores"],
             "Balan_acc_scores": self.scores["initial_scoring"]["balan_acc_scores"],
             "Models_type": "Default"
         })
 
         df_2 = pd.DataFrame({
+            "Experiment": [e for e in range(self.n_experiment)],
             "Acc_scores": self.scores["finalized_scoring"]["acc_scores"],
             "Balan_acc_scores": self.scores["finalized_scoring"]["balan_acc_scores"],
             "Models_type": "Tuned"
         })
 
-        df_melted = pd.concat([df_1, df_2]).melt(id_vars=['Models_type'], value_vars=['Acc_scores', 'Balan_acc_scores'],
-                                                 var_name='METRIC', value_name='SCORES')
+        tuned_balanced_acc_median = df_2['Balan_acc_scores'].median()
+        log.info(f"tuned_balanced_acc_median: {tuned_balanced_acc_median}")
+
+        bad_models = list(df_2[df_2["Balan_acc_scores"] < tuned_balanced_acc_median]["Experiment"])
+        log.info(f"bad_models: {bad_models}")
+
+        # remove bad_models and add the another box plot
+        qualified_models = [e for e in range(self.n_experiment) if e not in bad_models]
+        log.info(f"qualified_models: {qualified_models}")
+        df_3 = df_2.iloc[qualified_models].copy()
+        df_3["Models_type"] = "Tuned+Qualified"
+
+        df_melted = pd.concat([df_1, df_2, df_3]).melt(
+            id_vars=['Experiment', 'Models_type'],
+            value_vars=['Acc_scores', 'Balan_acc_scores'],
+            var_name='METRIC',
+            value_name='SCORES'
+        )
+
+        display(df_melted)
 
         comparison_data = pd.concat([df_1, df_2]).groupby('Models_type').mean().T
         self.comparison_data = comparison_data
         sns.catplot(x='METRIC', y='SCORES', hue='Models_type', data=df_melted, kind=kind)
+        # plt.axhline(y=0.7406060606060606, color='r', linestyle='--')
+        # plt.axhline(y=0.6838852813852813, color='r', linestyle='--')
+        plt.axhline(y=0.7424242424242424, color='b', linestyle='--')
+        plt.axhline(y=0.6920995670995671, color='b', linestyle='--')
 
 
 def cross_val_score_feature_comparison(X, y, scoring, n_repeats, n_jobs):

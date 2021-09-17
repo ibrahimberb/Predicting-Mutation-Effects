@@ -71,8 +71,8 @@ class Predictions(dict):
         predictions_distributions_data = self.predictions_distributions_per_exp[tcga].copy()
         predictions_distributions_data = (
             predictions_distributions_data
-                .rename_axis("EXPERIMENT")
-                .reset_index()
+            .rename_axis("EXPERIMENT")
+            .reset_index()
         )
         predictions_distributions_data.plot(
             x="EXPERIMENT",
@@ -168,7 +168,7 @@ class Predictions(dict):
 
     def drop_duplicated_entries_datasets(self, datasets: List[DataFrame]) -> None:
         """
-        Dropes the duplicated entires in each dataframes.
+        Drops the duplicated entries in each dataframes.
 
         Parameters
         ----------
@@ -182,7 +182,6 @@ class Predictions(dict):
             datasets[exp].drop_duplicates(keep="first", inplace=True)
 
     def plot_ensemble_prediction_distribution(self, tcga):
-        log.warning(self[f"{tcga}_ensemble_prediction_data"].columns)
         voted_predictions = self[f"{tcga}_ensemble_prediction_data"]['VOTED_PREDICTION']
         voted_predictions.value_counts().plot(kind="bar")
         plt.title(f'Distribution of predictions for {tcga}')
@@ -218,6 +217,7 @@ class PredictionsHard(Predictions):
         tcga_ensemble_prediction_data['VOTED_PREDICTION'] = tcga_ensemble_prediction_data.apply(
             max_votes, axis=1
         )
+
         self[f"{tcga}_ensemble_prediction_data"] = tcga_ensemble_prediction_data
         log.debug(f"Ensemble prediction data for {tcga} is prepared.")
         self[f"{tcga}_prediction_results"] = tcga_ensemble_prediction_data.drop(
@@ -348,14 +348,6 @@ class PredictionsSoft(Predictions):
         tcga_predictions_prob_data['VOTED_PREDICTION'] = (
             (tcga_predictions_prob_data['PROB_1s_AVG'] >= 0.50).astype('int')
         )
-
-        # tcga_predictions_prob_data['VOTED_PREDICTION'] = tcga_predictions_prob_data['PROB_0s_AVG'].apply(
-        #     convert_prob_to_class, axis=1
-        # )
-
-        # tcga_predictions_prob_data['VOTED_PREDICTION'] = (
-        #     (tcga_predictions_prob_data['PROB_0s_AVG'] >= 0.50).astype('int')
-        # )
 
         self[f"{tcga}_predictions_prob_data"] = tcga_predictions_prob_data
         log.debug(f"Prediction probabilities data for {tcga} is prepared."

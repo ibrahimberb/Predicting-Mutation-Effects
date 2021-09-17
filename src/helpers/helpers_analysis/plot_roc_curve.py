@@ -39,19 +39,19 @@ def plot_roc_curve_analysis(
     elaspic_cov_roc_values: RocValues
 ):
 
-    plt.figure(figsize=(8, 6))
-    # sns.set(style='white', font_scale=1.50)
-    sns.set_theme(style="white", palette="Set2", font_scale=1.50)  # Set2, Accent
+    plt.figure(figsize=(8, 6.5), dpi=600)
+    sns.set_theme(style="white", palette="Set2", font_scale=2.00)  # Set2, Accent
     plt.rc('font', family='serif')
-    plt.rc('xtick', labelsize='x-small')
-    plt.rc('ytick', labelsize='x-small')
+    # plt.rc('xtick', labelsize='x-small')
+    # plt.rc('ytick', labelsize='x-small')
 
     if cohort_specific is None:
         reference_data_name = f"{reference_data_name.upper()}"
     else:
         reference_data_name = f"{reference_data_name.upper()}\ {cohort_specific.upper()}"
 
-    plt.title(f'Receiver Operating Characteristic (ROC)\n${reference_data_name}\ STATUS$ vs Various Columns')
+    # plt.title(f'Receiver Operating Characteristic (ROC)\n${reference_data_name}\ STATUS$ vs Various Columns')
+    plt.title(f'Receiver Operating Characteristic (ROC)\n${reference_data_name}$')  # STATUS
     plt.plot(baseline_roc_values.fpr, baseline_roc_values.tpr,
              label='baseline (%0.3f)' % baseline_roc_values.roc_auc)  # color="#d62728",
     plt.plot(our_method_roc_values.fpr, our_method_roc_values.tpr,

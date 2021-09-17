@@ -70,6 +70,7 @@ def visualize_accuracy_metrics(
     balan_acc_scores: List[float],
     kind='strip'
 ):
+    sns.set_theme(style="ticks", palette="pastel", font_scale=1.15)
     data = pd.DataFrame({'ACCURACY': acc_scores,
                          'BALANCED_ACCURACY': balan_acc_scores})
     data_melted = pd.melt(data, var_name='METRIC', value_name='SCORE')
@@ -81,6 +82,8 @@ def visualize_accuracy_metrics(
 
 
 def visualize_distribution_top_n_features(shap_feature_selector, top_n):
+    # plt.figure(figsize=(12, 12))  # poster purpose
+    # sns.set(style='white', font_scale=2.5)  # poster purpose
     feature_to_counts = {}
     for feature in shap_feature_selector.n_features_to_aggregated_features[top_n]:
         count = (shap_feature_selector.aggregated_feature_selector
@@ -95,5 +98,6 @@ def visualize_distribution_top_n_features(shap_feature_selector, top_n):
     plt.xticks(ha='right', rotation=45)
 
     sns.despine(right=True)
-
+    # plt.tight_layout() # poster purpose
+    # plt.savefig('foo.png')  # poster purpose
     plt.show()

@@ -26,7 +26,13 @@ from helpers.helpers_predator.fine_tuning import FineTuner
 
 from helpers.helpers_predator.predictions import predictions_object
 
-from helpers.helpers_predator.models import DefaultModels, TunedModels, FinalizedModels, EnsembleVotingClassifier
+from helpers.helpers_predator.models import (
+    DefaultModels,
+    TunedModels,
+    QualifiedModels,
+    FinalizedModels,
+    EnsembleVotingClassifier)
+
 
 from helpers.mylogger import get_handler
 import logging
@@ -86,12 +92,14 @@ class Predator:
         self.default_models = DefaultModels(self.n_experiment)
         self.tuned_models = None
         self.finalized_models = None
+        self.qualified_models = None
 
         self.eval_valid = EvaluationValid(
             self.n_experiment,
             self.data_materials,
             self.default_models,
-            self.tuned_models
+            self.tuned_models,
+            self.qualified_models,
         )
 
         self.determined_feature_set = None
@@ -163,9 +171,11 @@ class Predator:
         # Fine tuning will be applied to training set, not all training data.
         Xs_determined = f"Xs_train_{self.determined_feature_set}"
 
-        self.fine_tuner = FineTuner(n_iter=n_iter, n_repeats_cv=n_repeats_cv, n_jobs=n_jobs, verbose=verbose,
-                                    Xs_determined=Xs_determined, n_experiment=self.n_experiment,
-                                    random_seeds=self.random_seeds, data_materials=self.data_materials)
+        self.fine_tuner = FineTuner(
+            n_iter=n_iter, n_repeats_cv=n_repeats_cv, n_jobs=n_jobs, verbose=verbose,
+            Xs_determined=Xs_determined, n_experiment=self.n_experiment,
+            random_seeds=self.random_seeds, data_materials=self.data_materials
+        )
 
     def run_search(self, search_type):
         self.fine_tuner.run_search(search_type)

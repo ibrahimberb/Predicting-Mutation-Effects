@@ -26,6 +26,13 @@ class TunedModels(list):
             self.append(estimator)
 
 
+class QualifiedModels(list):
+    def __init__(self, qualified_estimators):
+        super().__init__()
+        for estimator in qualified_estimators:
+            self.append(estimator)
+
+
 class FinalizedModels(list):
     def __init__(self, tuned_models):
         super().__init__()
