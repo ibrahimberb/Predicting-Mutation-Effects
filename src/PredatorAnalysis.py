@@ -291,6 +291,7 @@ class PredatorAnalysis:
         # Baseline Non-Zero
         preliminary_data_baseline_nonzero = preliminary_data[preliminary_data['BASELINE'] != 0].copy()
 
+        # Todo: pass another arg for prefix in generated table: e.g. "BASELINE_NON_ZERO"
         roc_curve_analysis(
             reference_data_name=self.reference_data_name,
             preliminary_data=preliminary_data_baseline_nonzero,
