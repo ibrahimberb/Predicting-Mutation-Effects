@@ -1,10 +1,10 @@
 from pathlib import Path
 from typing import Tuple, List
-from IPython.display import display
+# from IPython.display import display
 
 import pandas as pd
-import numpy as np
-from sklearn import metrics
+# import numpy as np
+# from sklearn import metrics
 
 from helpers.helpers_analysis.loaders import (
     load_snv_datasets,
@@ -36,11 +36,13 @@ from helpers.helpers_analysis.add_cancermine_status import add_cancermine_status
 
 from helpers.helpers_analysis.plot_roc_curve import roc_curve_analysis
 
-from helpers.helpers_analysis.loaders import ReferenceDataset
-from helpers.helpers_analysis.get_fpr_tpr_ths import get_fpr_tpr_ths
+from helpers.helpers_analysis.common import save_auc_scores
 
-import matplotlib.pyplot as plt
-import seaborn as sns
+from helpers.helpers_analysis.loaders import ReferenceDataset
+# from helpers.helpers_analysis.get_fpr_tpr_ths import get_fpr_tpr_ths
+#
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 
 from helpers.helpers_analysis.add_cgc_status import add_cgc_status
 
@@ -97,6 +99,7 @@ class PredatorAnalysis:
         self.reference_data_spec_cohort_path = reference_data_spec_cohort_path
         self.reference_data_path = reference_data_path
         self.data_materials = {}
+        self.auc_scores = {}
 
         # setattr(self, self.tcga, {})
 
@@ -269,19 +272,20 @@ class PredatorAnalysis:
             preliminary_data_name: str,
             state_variables=List[str]
     ):
+        log.debug("Plotting ROC Curves ..")
         preliminary_data = self.data_materials[f"{preliminary_data_name}"].copy()
 
         ref_gene_column = state_variables[0]
         ref_gene_column_cohort = state_variables[1]
 
-        roc_curve_analysis(
+        self.auc_scores["default"] = roc_curve_analysis(
             reference_data_name=self.reference_data_name,
             preliminary_data=preliminary_data,
             ref_gene_column=ref_gene_column,
             cohort_specific=None
         )
 
-        roc_curve_analysis(
+        self.auc_scores[f"default_{self.tcga}"] = roc_curve_analysis(
             reference_data_name=self.reference_data_name,
             preliminary_data=preliminary_data,
             ref_gene_column=ref_gene_column_cohort,
@@ -292,17 +296,20 @@ class PredatorAnalysis:
         preliminary_data_baseline_nonzero = preliminary_data[preliminary_data['BASELINE'] != 0].copy()
 
         # Todo: pass another arg for prefix in generated table: e.g. "BASELINE_NON_ZERO"
-        roc_curve_analysis(
+        self.auc_scores[f"baseline_nonzero"] = roc_curve_analysis(
             reference_data_name=self.reference_data_name,
             preliminary_data=preliminary_data_baseline_nonzero,
             ref_gene_column=ref_gene_column,
             cohort_specific=None
         )
 
-        roc_curve_analysis(
+        self.auc_scores[f"baseline_nonzero_{self.tcga}"] = roc_curve_analysis(
             reference_data_name=self.reference_data_name,
             preliminary_data=preliminary_data_baseline_nonzero,
             ref_gene_column=ref_gene_column_cohort,
             cohort_specific=self.tcga
         )
+
+    def export_auc_scores(self, file_name, overwrite=False):
+        save_auc_scores(self.prediction_data_path, file_name, self.auc_scores, overwrite)
 
