@@ -26,6 +26,8 @@ from helpers.helpers_predator.fine_tuning import FineTuner
 
 from helpers.helpers_predator.predictions import predictions_object
 
+from helpers.helpers_predator.common import export_prediction_data
+
 from helpers.helpers_predator.models import (
     DefaultModels,
     TunedModels,
@@ -61,10 +63,12 @@ class Predator:
             tcga_code_path_pairs: List[Tuple[TCGA_CODE, Path]],
             initial_columns_path: Path,
             n_experiment: int,
+            eliminate_models=False
     ):
 
         log.debug('Initializing Predator ..')
         self.n_experiment = n_experiment
+        self.n_models = self.n_experiment
         self.random_seeds = list(
             range(1, self.n_experiment + 1)
         )  # todo: this will be a random array, too.
@@ -99,7 +103,6 @@ class Predator:
             self.data_materials,
             self.default_models,
             self.tuned_models,
-            self.qualified_models,
         )
 
         self.determined_feature_set = None
@@ -111,6 +114,10 @@ class Predator:
 
         self.ensemble_voting_classifier = None
         self.predictions = None
+
+        self.eliminate_models = eliminate_models
+
+        self.config = {}
 
         # variant = spsm
         # self.variant = variant
@@ -167,7 +174,33 @@ class Predator:
         log.debug(f"Setting determined features to \n{determined_features}.")
         self.determined_features = determined_features
 
-    def init_fine_tuner(self, n_iter, n_repeats_cv, n_jobs, verbose):
+    # def init_fine_tuner(self, n_iter, n_repeats_cv, n_jobs, verbose):
+    #     # Fine tuning will be applied to training set, not all training data.
+    #     Xs_determined = f"Xs_train_{self.determined_feature_set}"
+    #
+    #     self.fine_tuner = FineTuner(
+    #         n_iter=n_iter, n_repeats_cv=n_repeats_cv, n_jobs=n_jobs, verbose=verbose,
+    #         Xs_determined=Xs_determined, n_experiment=self.n_experiment,
+    #         random_seeds=self.random_seeds, data_materials=self.data_materials
+    #     )
+
+    def run_hyperparameter_search(
+            self,
+            n_iter,
+            n_repeats_cv,
+            n_jobs,
+            verbose,
+            search_type,
+    ):
+
+        hyperparam_config = {
+            "n_iter": n_iter,
+            "n_repeats_cv": n_repeats_cv,
+            "search_type": search_type
+        }
+
+        self.config['hyperparameters'] = hyperparam_config
+
         # Fine tuning will be applied to training set, not all training data.
         Xs_determined = f"Xs_train_{self.determined_feature_set}"
 
@@ -177,13 +210,27 @@ class Predator:
             random_seeds=self.random_seeds, data_materials=self.data_materials
         )
 
-    def run_search(self, search_type):
         self.fine_tuner.run_search(search_type)
         self.tuned_models = TunedModels(self.fine_tuner.best_estimators)
 
+    def compare_tuned_models(self, kind='box'):
+        self.eval_valid.compare_models(kind)
+        self.qualified_models = QualifiedModels(self.eval_valid.qualified_models)
+
     def fit_finalized_models(self):
         log.debug("Fitting finalized models with all training data ..")
-        self.finalized_models = FinalizedModels(self.tuned_models)
+        if self.eliminate_models:
+            log.info(f"Model elimination: {self.eliminate_models}")
+            log.info(f"Using {len(self.qualified_models)} qualified models as finalized models.")
+            self.finalized_models = FinalizedModels(self.qualified_models)
+            self.n_models = len(self.qualified_models)
+
+        else:
+            log.info(f"Model elimination: {self.eliminate_models}")
+            log.info(f"Using {len(self.tuned_models)} tuned models as finalized models.")
+            self.finalized_models = FinalizedModels(self.tuned_models)
+
+        # Fill each model
         self.finalized_models.fit_all(self.data_materials, self.determined_feature_set)
 
     def initialize_target_data_materials(self):
@@ -197,7 +244,7 @@ class Predator:
             self.finalized_models, voting=voting
         )
 
-        self.predictions = predictions_object(voting, self.n_experiment)
+        self.predictions = predictions_object(voting, self.n_models)
 
         for tcga in self.tcga_cohorts:
             log.debug(f"Predicting on {tcga} cohort ..")
@@ -219,9 +266,26 @@ class Predator:
                 tcga, self.data_materials[f"{tcga}"]
             )
 
-#
-# predator = Predator(project_common_file_dir=PROJECT_COMMON_FILE_DIR,
-#                     mutations_path=MUTATIONS_PATH,
-#                     tcga_code_path_pairs=[('brca', BRCA_PATH)],
-#                     initial_columns_path=INITIAL_COLUMNS_PATH,
-#                     n_experiment=50)
+    def export_prediction(
+        self,
+        tcga,
+        data,
+        file_name,
+        folder_path,
+        voting,
+        overwrite=False,
+        file_extension='csv'
+    ):
+        config_main = {
+            "n_experiment": self.n_experiment,
+            "eliminate_models": self.eliminate_models,
+            "n_models": self.n_models
+        }
+
+        self.config["main"] = config_main
+
+        export_prediction_data(
+            tcga=tcga, data=data, file_name=file_name, folder_path=folder_path,
+            config=self.config, overwrite=overwrite, voting=voting, file_extension=file_extension
+        )
+

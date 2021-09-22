@@ -29,6 +29,7 @@ class TunedModels(list):
 class QualifiedModels(list):
     def __init__(self, qualified_estimators):
         super().__init__()
+        assert qualified_estimators is not None
         for estimator in qualified_estimators:
             self.append(estimator)
 

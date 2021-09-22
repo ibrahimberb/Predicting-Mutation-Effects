@@ -172,13 +172,12 @@ class EvaluationValid:
             data_materials,
             default_models=None,
             tuned_models=None,
-            qualified_models=None
     ):
         self.n_experiment = n_experiment
         self.data_materials = data_materials
         self.default_models = default_models
         self.tuned_models = tuned_models
-        self.qualified_models = qualified_models
+        self.qualified_models = None
         self.scores = {}
         self.comparison_data = None
 
@@ -209,6 +208,7 @@ class EvaluationValid:
             X_train, y_train, X_valid, y_valid = self.get_train_valid_splits(exp, determined_features)
             log_simple.debug(f"X_train.shape={X_train.shape}, y_train.shape={y_train.shape}, "
                              f"X_valid.shape={X_valid.shape}, y_valid.shape={y_valid.shape}")
+            log_simple.debug(f"Classifier: {classifiers[exp]}")
             acc_score, balan_acc_score = evaluate_valid(
                 classifiers[exp], X_train, y_train, X_valid, y_valid, show_confusion_matrix
             )
@@ -235,6 +235,16 @@ class EvaluationValid:
             )
             self.scores["initial_scoring"] = scores_dict
 
+        elif models_type == "feature_selected":
+            # Feature selected models are essentially default models
+            # but we run then with determined features.
+            log.debug("Evaluating with default models using determined features.")
+            log.debug(f"Determined features: \n{determined_features}")
+            scores_dict = self.run_evaluation(
+                self.default_models, show_confusion_matrix, determined_features
+            )
+            self.scores["feature_selected_scoring"] = scores_dict
+
         elif models_type == "tuned":
             log.debug("Evaluating with tuned models.")
             log.debug(f"Determined features: \n{determined_features}")
@@ -242,60 +252,83 @@ class EvaluationValid:
                 self.tuned_models, show_confusion_matrix, determined_features
             )
             self.scores["finalized_scoring"] = scores_dict
+
         else:
             raise ValueError("Invalid arg for `models_type`.")
 
-    def comparison_models(self, kind='box'):
+    def compare_models(self, kind):
         """
         Comparison of following models:
             1. Default Models
             2. Tuned Models
             3. Qualified Models
         """
-        sns.set_theme(style="ticks", palette="twilight_shifted_r", font_scale=1.15)
+        sns.set_theme(style="ticks", palette="Set3", font_scale=1.15)  # twilight_shifted_r
         # sns.set(style="ticks", font_scale=1.15)  # white, dark, whitegrid, darkgrid, ticks
-        df_1 = pd.DataFrame({
+        default_data = pd.DataFrame({
             "Experiment": [e for e in range(self.n_experiment)],
             "Acc_scores": self.scores["initial_scoring"]["acc_scores"],
             "Balan_acc_scores": self.scores["initial_scoring"]["balan_acc_scores"],
             "Models_type": "Default"
         })
 
-        df_2 = pd.DataFrame({
+        feature_selected_data = pd.DataFrame({
+            "Experiment": [e for e in range(self.n_experiment)],
+            "Acc_scores": self.scores["feature_selected_scoring"]["acc_scores"],
+            "Balan_acc_scores": self.scores["feature_selected_scoring"]["balan_acc_scores"],
+            "Models_type": "Default+FeatureSelected"
+        })
+
+        tuned_data = pd.DataFrame({
             "Experiment": [e for e in range(self.n_experiment)],
             "Acc_scores": self.scores["finalized_scoring"]["acc_scores"],
             "Balan_acc_scores": self.scores["finalized_scoring"]["balan_acc_scores"],
-            "Models_type": "Tuned"
+            "Models_type": "Tuned+FeatureSelected"
         })
 
-        tuned_balanced_acc_median = df_2['Balan_acc_scores'].median()
+        tuned_balanced_acc_median = tuned_data['Balan_acc_scores'].median()
         log.info(f"tuned_balanced_acc_median: {tuned_balanced_acc_median}")
 
-        bad_models = list(df_2[df_2["Balan_acc_scores"] < tuned_balanced_acc_median]["Experiment"])
-        log.info(f"bad_models: {bad_models}")
+        bad_models_ix = list(tuned_data[tuned_data["Balan_acc_scores"] < tuned_balanced_acc_median]["Experiment"])
+        log.info(f"bad_models_ix: {bad_models_ix}")
 
-        # remove bad_models and add the another box plot
-        qualified_models = [e for e in range(self.n_experiment) if e not in bad_models]
-        log.info(f"qualified_models: {qualified_models}")
-        df_3 = df_2.iloc[qualified_models].copy()
-        df_3["Models_type"] = "Tuned+Qualified"
+        # remove bad_models_ix and add the another box plot
+        qualified_models_ix = [e for e in range(self.n_experiment) if e not in bad_models_ix]
+        log.info(f"qualified_models_ix: {qualified_models_ix}")
+        tuned_qualified_data = tuned_data.iloc[qualified_models_ix].copy()
+        tuned_qualified_data["Models_type"] = "Tuned+FeatureSelected+Qualified"
 
-        df_melted = pd.concat([df_1, df_2, df_3]).melt(
+        # Assign qualified models
+        self.qualified_models = [self.tuned_models[i] for i in qualified_models_ix]
+
+        df_melted = pd.concat(
+            [default_data, feature_selected_data, tuned_data, tuned_qualified_data]
+        ).melt(
             id_vars=['Experiment', 'Models_type'],
             value_vars=['Acc_scores', 'Balan_acc_scores'],
             var_name='METRIC',
             value_name='SCORES'
         )
 
-        display(df_melted)
+        # display(df_melted)
 
-        comparison_data = pd.concat([df_1, df_2]).groupby('Models_type').mean().T
+        comparison_data = pd.concat(
+            [default_data, feature_selected_data, tuned_data, tuned_qualified_data]
+        ).groupby('Models_type').mean().T.drop('Experiment')
         self.comparison_data = comparison_data
+
         sns.catplot(x='METRIC', y='SCORES', hue='Models_type', data=df_melted, kind=kind)
         # plt.axhline(y=0.7406060606060606, color='r', linestyle='--')
         # plt.axhline(y=0.6838852813852813, color='r', linestyle='--')
         plt.axhline(y=0.7424242424242424, color='b', linestyle='--')
         plt.axhline(y=0.6920995670995671, color='b', linestyle='--')
+
+        df_concated = pd.concat(
+            [default_data, feature_selected_data, tuned_data, tuned_qualified_data]
+        )
+        log_simple.debug("{}\n".format(
+            df_concated['Models_type'].value_counts().to_frame(name="Number of Model"))
+        )
 
 
 def cross_val_score_feature_comparison(X, y, scoring, n_repeats, n_jobs):
