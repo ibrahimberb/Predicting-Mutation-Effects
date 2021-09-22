@@ -35,24 +35,41 @@ def visualize_sampled_train_datasets_label_counts(sampled_train_data_list, kind)
         sampled_train_data_list
     )
 
-    if kind == "strip":
+    experiment_statistics_data_melted = pd.melt(
+        sampled_datasets_label_counts,
+        id_vars=["SAMPLED_TRAIN_DATA"],
+        value_vars=["Disrupting", "Increasing+NoEff"],
+        var_name="MUTATION_EFFECT",
+        value_name="LABEL_COUNT",
+    )
 
-        experiment_statistics_data_melted = pd.melt(
-            sampled_datasets_label_counts,
-            id_vars=["SAMPLED_TRAIN_DATA"],
-            value_vars=["Disrupting", "Increasing+NoEff"],
-            var_name="MUTATION_EFFECT",
-            value_name="LABEL_COUNT",
-        )
+    medians = experiment_statistics_data_melted.groupby(['MUTATION_EFFECT'])['LABEL_COUNT'].median()
+    vertical_offset = experiment_statistics_data_melted['LABEL_COUNT'].median() * 0.05  # offset from median for display
+
+    if kind in ["strip", "box"]:
 
         plt.figure(figsize=(3, 4))
-        sns.stripplot(
-            x="MUTATION_EFFECT",
-            y="LABEL_COUNT",
-            data=experiment_statistics_data_melted,
-            palette="ch:s=-.2,r=.6",
-            jitter=True,
-        )
+
+        if kind == "strip":
+            plot = sns.stripplot(
+                x="MUTATION_EFFECT",
+                y="LABEL_COUNT",
+                data=experiment_statistics_data_melted,
+                palette="ch:s=-.2,r=.6",
+                jitter=True,
+            )
+
+        elif kind == "box":
+            plot = sns.boxplot(
+                x="MUTATION_EFFECT",
+                y="LABEL_COUNT",
+                data=experiment_statistics_data_melted,
+                palette="ch:s=-.2,r=.6",
+            )
+
+        for xtick in plot.get_xticks():
+            plot.text(xtick, medians[xtick] + vertical_offset, medians[xtick],
+                      horizontalalignment='left', size='small', color='k')
 
     elif kind == "bar":
         sampled_datasets_label_counts.plot(
