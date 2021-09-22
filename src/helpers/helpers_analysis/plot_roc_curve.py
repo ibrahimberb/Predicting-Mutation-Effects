@@ -11,6 +11,18 @@ import seaborn as sns
 
 from .get_fpr_tpr_ths import get_fpr_tpr_ths
 
+from ..mylogger import get_handler
+import logging
+
+handler = get_handler()
+
+log = logging.getLogger(__name__)
+log.handlers[:] = []
+log.addHandler(handler)
+log.setLevel(logging.DEBUG)
+
+
+
 
 class RocValues:
     def __init__(
@@ -51,6 +63,7 @@ def plot_roc_curve_analysis(
         reference_data_name = f"{reference_data_name.upper()}\ {cohort_specific.upper()}"
 
     # plt.title(f'Receiver Operating Characteristic (ROC)\n${reference_data_name}\ STATUS$ vs Various Columns')
+    # TODO: line width: make it thicker
     plt.title(f'Receiver Operating Characteristic (ROC)\n${reference_data_name}$')  # STATUS
     plt.plot(baseline_roc_values.fpr, baseline_roc_values.tpr,
              label='baseline (%0.3f)' % baseline_roc_values.roc_auc)  # color="#d62728",
@@ -66,6 +79,10 @@ def plot_roc_curve_analysis(
     plt.ylabel('True Positive Rate\n(Sensitivity)')
     plt.xlabel('False Positive Rate\n(1-Specificity)')
     plt.show()
+
+    log.debug("AUC BASELINE: {:.3f}".format(baseline_roc_values.roc_auc))
+    log.debug("AUC OURS: {:.3f}".format(our_method_roc_values.roc_auc))
+    log.debug("AUC ELASPIC COVERAGE: {:.3f}".format(elaspic_cov_roc_values.roc_auc))
 
 
 def roc_curve_analysis(
@@ -100,6 +117,14 @@ def roc_curve_analysis(
         our_method_roc_values=our_method_roc_values,
         elaspic_cov_roc_values=elaspic_cov_roc_values
     )
+
+    auc_scores = {
+        "BASELINE": "%0.3f" % baseline_roc_values.roc_auc,
+        "OURS": "%0.3f" % our_method_roc_values.roc_auc,
+        "ELASPIC_COV": "%0.3f" % elaspic_cov_roc_values.roc_auc
+    }
+
+    return auc_scores
 
     # return baseline_roc_values, our_method_roc_values, plot_roc_curve_analysis # ?????
 
