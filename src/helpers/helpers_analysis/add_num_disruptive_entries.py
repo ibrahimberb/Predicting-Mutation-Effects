@@ -27,7 +27,7 @@ def add_num_disruptive_entries(preliminary_data: pd.DataFrame, prediction_data: 
     for protein in preliminary_data["PROTEIN"]:
         # Get the disruptive entries, i.e. prediction is 0.
         disruptive_entries_data = prediction_data[(prediction_data['UniProt_ID'] == protein) &
-                                                  (prediction_data['Predictions'] == 0)]
+                                                  (prediction_data['Prediction'] == 0)]
         num_disruptive_entries.append(len(disruptive_entries_data))
 
     preliminary_data['NUM_DISRUPTIVE_ENTRIES'] = num_disruptive_entries

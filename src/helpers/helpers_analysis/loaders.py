@@ -113,15 +113,15 @@ def load_elaspic_datasets(tcga, elaspic_core_path, elaspic_interface_path, data_
 
 
 def load_prediction_dataset(tcga, prediction_data_path, data_materials):
-    log.info(f"Loading {tcga} PREDICTION dataset ..")
+    log.info(f"Loading {tcga} Prediction dataset ..")
 
     # Prediction reduced already
     tcga_prediction_data = pd.read_csv(prediction_data_path, low_memory=False)
-    log.debug(f"{tcga} PREDICTION data shape: {tcga_prediction_data.shape}")
+    log.debug(f"{tcga} Prediction data shape: {tcga_prediction_data.shape}")
 
     data_materials[f"{tcga}_prediction_data"] = tcga_prediction_data
 
-    log.info(f"{tcga} PREDICTION dataset is loaded.")
+    log.info(f"{tcga} Prediction dataset is loaded.")
 
 
 def load_reference_dataset(

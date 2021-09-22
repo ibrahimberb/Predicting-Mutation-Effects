@@ -113,7 +113,7 @@ def counts_baseline_vs_our_method(
                         prediction_search = prediction_data[
                             (prediction_data['UniProt_ID'] == protein) &
                             (prediction_data['Mutation'] == mutation) &
-                            (prediction_data['Predictions'] == 0)].copy()
+                            (prediction_data['Prediction'] == 0)].copy()
                         # add interactor proteins to disruptive_interactions set.
                         interactor_list = prediction_search['Interactor_UniProt_ID'].to_list()
                         disruptive_interactions.update(interactor_list)

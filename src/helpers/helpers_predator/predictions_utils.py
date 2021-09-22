@@ -31,10 +31,10 @@ def get_predictive_columns_removed_data(data: DataFrame) -> DataFrame:
     -------
         features_removed_data : <DataFrame>
             The dataframe containing prediction values along with triplet information.
-            I.e. ["Predictions", "UniProt_ID", "Mutation", "Interactor_UniProt_ID"]
+            I.e. ["Prediction", "UniProt_ID", "Mutation", "Interactor_UniProt_ID"]
     """
 
-    features_removed_data = data[["Predictions", "UniProt_ID", "Mutation", "Interactor_UniProt_ID"]].copy()
+    features_removed_data = data[["Prediction", "UniProt_ID", "Mutation", "Interactor_UniProt_ID"]].copy()
     return features_removed_data
 
 
@@ -92,7 +92,7 @@ def get_prediction_entry(protein, mutation, interactor, data):
         (data['UniProt_ID'] == protein) &
         (data['Mutation'] == mutation) &
         (data['Interactor_UniProt_ID'] == interactor)
-        ]['Predictions'].values
+        ]['Prediction'].values
 
     # The entry such that it is predicted both `1` and `0` for that triplet, hence dropped.
     if predictions_array.size == 0:
@@ -119,7 +119,7 @@ def get_prediction_entry_prob(row, data):
         (data['UniProt_ID'] == row['UniProt_ID']) &
         (data['Mutation'] == row['Mutation']) &
         (data['Interactor_UniProt_ID'] == row['Interactor_UniProt_ID'])
-    ]['Predictions'].values
+    ]['Prediction'].values
 
     # log.info(f"prediction_probs_array: \n{prediction_probs_array}")
 
@@ -214,11 +214,11 @@ def drop_invalid_predicted_entries(data: DataFrame):
         search_data_predictions = data[(data["UniProt_ID"] == row["UniProt_ID"]) &
                                        (data["Mutation"] == row["Mutation"]) &
                                        (data["Interactor_UniProt_ID"] == row["Interactor_UniProt_ID"])][
-            "Predictions"].unique()
+            "Prediction"].unique()
 
         # If search_data_predictions contains class-0 and class-1 together, then it is an invalid predicted entries.
         if len(search_data_predictions) > 1:
-            entries.append((row["Predictions"], row["UniProt_ID"], row["Mutation"], row["Interactor_UniProt_ID"]))
+            entries.append((row["Prediction"], row["UniProt_ID"], row["Mutation"], row["Interactor_UniProt_ID"]))
             entries_ix.append(index)
 
     data_dropped, removed_entries_data = get_valid_and_invalid_entries_datasets(data, entries, entries_ix)
@@ -245,12 +245,12 @@ def drop_invalid_predicted_probs_entries(data: DataFrame):
             (data["UniProt_ID"] == row["UniProt_ID"]) &
             (data["Mutation"] == row["Mutation"]) &
             (data["Interactor_UniProt_ID"] == row["Interactor_UniProt_ID"])
-            ]["Predictions"]
+            ]["Prediction"]
 
         # If search_data_predictions_probs contains probabilities values of greater than 0.50 and lower than 50
         # at the same time, then it is an invalid predicted entries.
         if not are_all_valid_predictions(search_data_predictions_probs):
-            entries.append((row["Predictions"], row["UniProt_ID"], row["Mutation"], row["Interactor_UniProt_ID"]))
+            entries.append((row["Prediction"], row["UniProt_ID"], row["Mutation"], row["Interactor_UniProt_ID"]))
             entries_ix.append(index)
 
     data_dropped, removed_entries_data = get_valid_and_invalid_entries_datasets(data, entries, entries_ix)
@@ -260,7 +260,7 @@ def drop_invalid_predicted_probs_entries(data: DataFrame):
 
 def get_valid_and_invalid_entries_datasets(data, entries, entries_ix):
     removed_entries_data = pd.DataFrame(entries,
-                                        columns=["PREDICTIONS", "PROTEIN", "MUTATION", "INTERACTOR"])
+                                        columns=["PREDICTION", "PROTEIN", "MUTATION", "INTERACTOR"])
     log.debug('Removed entries first five rows (of {}): \n{}'.format(
         removed_entries_data.shape[0], removed_entries_data.head())
     )
@@ -329,7 +329,15 @@ def add_votes(
 
 
 def take_avg(x):
-    return np.mean([e for e in x if e != 'NO_VOTE'])
+    """
+    Returns the average of probabilities of class 1.
+    If number of NO_VOTE are more than half, returns NO_VOTE.
+    """
+    n_no_votes = len([e for e in x if e == 'NO_VOTE'])
+    if n_no_votes >= (len(x) / 2):
+        return "NO_VOTE"
+    else:
+        return round(np.mean([e for e in x if e != 'NO_VOTE']), 5)
 
 
 def add_voted_probs(
@@ -377,13 +385,11 @@ def add_voted_probs(
         data : <DataFrame>
             Corresponding predictions probabilities added version of input data.
     """
-    # log.debug("ens data shape: {}".format(data.shape))
-    # log.debug("duplicated?: {}".format(data.duplicated().sum()))
 
     for i, final_prediction_data in tqdm(
             enumerate(final_prediction_datasets), total=len(final_prediction_datasets)
     ):
-        data[f'{i}'] = data.apply(get_prediction_entry_prob, axis=1, args=(final_prediction_data,))
+        data[f'Trial {i}'] = data.apply(get_prediction_entry_prob, axis=1, args=(final_prediction_data,))
         # x = my_series.apply(my_function, args=(arg1,))
 
     return data
