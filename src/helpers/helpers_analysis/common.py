@@ -36,4 +36,4 @@ def save_auc_scores(prediction_file_path, file_name, auc_scores, overwrite):
 
         log.info(f"AUC scores are saved into file {file_name}")
 
-    return data_entries
+        return data_entries
