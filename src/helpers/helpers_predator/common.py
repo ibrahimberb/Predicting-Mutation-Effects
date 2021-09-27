@@ -66,7 +66,7 @@ def export_prediction_data(
     current_date = datetime.today().strftime('%Y-%m-%d')
     current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
-    folder_name = f"{tcga}_prediction_{current_time}"
+    folder_name = f"{tcga}_prediction_{current_date}"
     log.debug(f"Exporting data {file_name} at location {folder_path} in folder {folder_name}..")
 
     folder_path = os.path.join(folder_path, folder_name)
@@ -81,21 +81,18 @@ def export_prediction_data(
                   "To overwrite existing file, use `overwrite=True`.")
 
     else:
-        # Export
+        # Export data
         data.to_csv(file_name, index=False)
         log.info(f'{file_name} is exported successfully.')
 
-    # Export metadata
-    config_path = os.path.join(folder_path, "config.txt")
-    with open(config_path, "w") as file:
-        for config_name, config_dict in config.items():
-            file.write(f"{config_name.upper()}\n")
-            for key, values in config_dict.items():
-                file.write(f"{key.upper()}: {config[f'{config_name}'][f'{key}']}\n")
+        # Export metadata
+        config_path = os.path.join(folder_path, "config.txt")
+        with open(config_path, "w") as file:
+            for config_name, config_dict in config.items():
+                file.write(f"{config_name.upper()}\n")
+                for key, values in config_dict.items():
+                    file.write(
+                        f"    {key.upper()}: {config[f'{config_name}'][f'{key}']}\n"
+                    )
 
-        # file.write(f"N_EXPERIMENT: {config['n_experiment']}\n")
-        # file.write(f"ELIMINATE_MODELS: {config['eliminate_models']}\n")
-        # file.write(f"N_MODELS: {config['n_models']}\n")
-        # file.write(f"VOTING: {voting}")
-
-    log.debug(f"Data is exported.")
+        log.debug(f"Config is exported.")

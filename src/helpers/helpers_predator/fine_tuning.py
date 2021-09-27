@@ -28,16 +28,17 @@ log.setLevel(logging.DEBUG)
 #     'min_samples_split': [2, 5, 10]
 # }
 
-PARAM_GRID_SIMPLE = {
-    'max_depth': [2, 5, 10],
-    'n_estimators': [10, 25, 50, 75, 100, 200, 400],
-    'min_samples_split': [2, 5],
-    'max_features': ['auto', 'sqrt', None],
-    'class_weight': ['balanced', None]
-}
-
 
 class FineTuner:
+
+    PARAM_GRID_SIMPLE = {
+        'max_depth': [2, 5, 10],
+        'n_estimators': [10, 25, 50, 75, 100, 200, 400],
+        'min_samples_split': [2, 5],
+        'max_features': ['auto', 'sqrt', None],
+        'class_weight': ['balanced', None]
+    }
+
     def __init__(
             self,
             n_iter: int,
@@ -48,6 +49,7 @@ class FineTuner:
             n_experiment: int,
             random_seeds: List[int],
             data_materials,
+            param_grid_level=0
     ):
         self.n_iter = n_iter
         self.n_repeats_cv = n_repeats_cv
@@ -61,6 +63,15 @@ class FineTuner:
         self.randomized_search_objects = None
         self.classifiers_attributes_data = None
         self.best_estimators = None
+
+        self.param_grid = self.get_param_grid(param_grid_level)
+
+    def get_param_grid(self, level):
+        if level == 0:
+            return self.PARAM_GRID_SIMPLE
+
+        # elif level == 1:
+        #     return self.PARAM_GRID_1
 
     def run_randomized_search(self) -> None:
         log.debug("Running randomized search for each experiment ..")
@@ -78,7 +89,7 @@ class FineTuner:
 
     def run_search(self, search_type="randomized") -> None:
         log.debug(f"Running {search_type} search for each experiment ..")
-        log.debug(f"PARAM_GRID: {PARAM_GRID_SIMPLE}")
+        log.debug(f"PARAM_GRID: {self.param_grid}")
         search_objects = []
         if search_type == "randomized":
             searcher = self.get_randomized_search
@@ -97,11 +108,10 @@ class FineTuner:
         self.save_best_estimators()
 
     def get_randomized_search(self, random_seed) -> RandomizedSearchCV:
-        param_grid = PARAM_GRID_SIMPLE
 
         clf = get_default_classifier(random_state=random_seed)
 
-        randomized_search = RandomizedSearchCV(clf, param_grid, n_iter=self.n_iter,
+        randomized_search = RandomizedSearchCV(clf, self.param_grid, n_iter=self.n_iter,
                                                ## TODO, change n_iter to 10, (or some other num.)
                                                random_state=random_seed,
                                                cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=self.n_repeats_cv,
@@ -112,11 +122,10 @@ class FineTuner:
         return randomized_search
 
     def get_grid_search(self, random_seed) -> GridSearchCV:
-        param_grid = PARAM_GRID_SIMPLE
 
         clf = get_default_classifier(random_state=random_seed)
 
-        grid_search = GridSearchCV(clf, param_grid,
+        grid_search = GridSearchCV(clf, self.param_grid,
                                    cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=self.n_repeats_cv,
                                                               random_state=random_seed),
                                    scoring='balanced_accuracy',

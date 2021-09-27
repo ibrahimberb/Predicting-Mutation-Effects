@@ -191,24 +191,31 @@ class Predator:
             n_jobs,
             verbose,
             search_type,
+            param_grid_level,
     ):
-
-        hyperparam_config = {
-            "n_iter": n_iter,
-            "n_repeats_cv": n_repeats_cv,
-            "search_type": search_type
-        }
-
-        self.config['hyperparameters'] = hyperparam_config
 
         # Fine tuning will be applied to training set, not all training data.
         Xs_determined = f"Xs_train_{self.determined_feature_set}"
 
         self.fine_tuner = FineTuner(
-            n_iter=n_iter, n_repeats_cv=n_repeats_cv, n_jobs=n_jobs, verbose=verbose,
-            Xs_determined=Xs_determined, n_experiment=self.n_experiment,
-            random_seeds=self.random_seeds, data_materials=self.data_materials
+            n_iter=n_iter,
+            n_repeats_cv=n_repeats_cv,
+            n_jobs=n_jobs, verbose=verbose,
+            Xs_determined=Xs_determined,
+            n_experiment=self.n_experiment,
+            random_seeds=self.random_seeds,
+            data_materials=self.data_materials,
+            param_grid_level=param_grid_level
         )
+
+        hyperparam_config = {
+            "n_iter": n_iter,
+            "n_repeats_cv": n_repeats_cv,
+            "search_type": search_type,
+            "param_grid": self.fine_tuner.param_grid
+        }
+
+        self.config['hyperparameters'] = hyperparam_config
 
         self.fine_tuner.run_search(search_type)
         self.tuned_models = TunedModels(self.fine_tuner.best_estimators)
@@ -285,7 +292,12 @@ class Predator:
         self.config["main"] = config_main
 
         export_prediction_data(
-            tcga=tcga, data=data, file_name=file_name, folder_path=folder_path,
-            config=self.config, overwrite=overwrite, voting=voting, file_extension=file_extension
+            tcga=tcga,
+            data=data,
+            file_name=file_name,
+            folder_path=folder_path,
+            config=self.config,
+            overwrite=overwrite,
+            voting=voting,
+            file_extension=file_extension
         )
-
