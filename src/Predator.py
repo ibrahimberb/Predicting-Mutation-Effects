@@ -33,7 +33,8 @@ from helpers.helpers_predator.models import (
     TunedModels,
     QualifiedModels,
     FinalizedModels,
-    EnsembleVotingClassifier)
+    EnsembleVotingClassifier
+)
 
 
 from helpers.mylogger import get_handler
@@ -284,8 +285,9 @@ class Predator:
         file_extension='csv'
     ):
         config_main = {
-            "n_experiment": self.n_experiment,
+            # TODO: add info about tcga data: (its path/name and dimensions)
             "eliminate_models": self.eliminate_models,
+            "n_experiment": self.n_experiment,
             "n_models": self.n_models
         }
 
