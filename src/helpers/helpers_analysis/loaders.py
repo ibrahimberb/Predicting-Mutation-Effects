@@ -26,7 +26,6 @@ class ReferenceDataset:
     CGC = 'cgc'
 
 
-
 def load_snv_datasets(tcga: str, snv_path: Path, data_materials: dict):
     log.info(f"Loading {tcga} SNV datasets ..")
     tcga_snv_data = pd.read_csv(snv_path, low_memory=False)
@@ -50,6 +49,8 @@ def load_elaspic_core_data(tcga, elaspic_core_path, data_materials):
     log.debug("Loading ELASPIC CORE data materials ..")
 
     tcga_elaspic_core_data = pd.read_csv(elaspic_core_path, sep='\t', low_memory=False)
+    tcga_elaspic_core_data.drop_duplicates(keep="first", inplace=True)
+
     log.debug(f"{tcga} ELASPIC CORE data size: {tcga_elaspic_core_data.shape}")
 
     tcga_elaspic_core_data_simplified = simplify_elaspic_data(tcga_elaspic_core_data)
@@ -65,6 +66,8 @@ def load_elaspic_interface_data(tcga, elaspic_interface_path, data_materials):
     log.debug("Loading ELASPIC INTERFACE data materials ..")
 
     tcga_elaspic_interface_data = pd.read_csv(elaspic_interface_path, sep='\t', low_memory=False)
+    tcga_elaspic_interface_data.drop_duplicates(keep="first", inplace=True)
+
     log.debug(f"{tcga} ELASPIC INTERFACE data size: {tcga_elaspic_interface_data.shape}")
 
     tcga_elaspic_interface_processed_data = simplify_elaspic_data(tcga_elaspic_interface_data)
