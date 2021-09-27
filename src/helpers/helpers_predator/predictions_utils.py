@@ -259,8 +259,10 @@ def drop_invalid_predicted_probs_entries(data: DataFrame):
 
 
 def get_valid_and_invalid_entries_datasets(data, entries, entries_ix):
-    removed_entries_data = pd.DataFrame(entries,
-                                        columns=["PREDICTION", "PROTEIN", "MUTATION", "INTERACTOR"])
+    removed_entries_data = pd.DataFrame(
+        entries, columns=["PREDICTION", "PROTEIN", "MUTATION", "INTERACTOR"]
+    )
+
     log.debug('Removed entries first five rows (of {}): \n{}'.format(
         removed_entries_data.shape[0], removed_entries_data.head())
     )
