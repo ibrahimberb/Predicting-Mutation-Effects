@@ -1,0 +1,4 @@
+default: {'BASELINE': '0.575', 'OURS': '0.558', 'ELASPIC_COV': '0.509'}
+default_brca: {'BASELINE': '0.599', 'OURS': '0.592', 'ELASPIC_COV': '0.537'}
+baseline_nonzero: {'BASELINE': '0.555', 'OURS': '0.567', 'ELASPIC_COV': '0.552'}
+baseline_nonzero_brca: {'BASELINE': '0.649', 'OURS': '0.648', 'ELASPIC_COV': '0.610'}
