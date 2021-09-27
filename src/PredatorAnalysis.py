@@ -55,6 +55,7 @@ log.setLevel(logging.DEBUG)
 
 TCGA_CODE = str
 REFERENCE_DATA_NAME = str
+RANDOM_ID = str
 CohortSpecificReferenceDataPath, ReferenceDataPath = Path, Path
 
 SNV_COMMON_PATH = "C:/Users/ibrah/Desktop/TUSEB_Study/Data_Collection_and_Filtering/SNV/"
@@ -84,15 +85,22 @@ class PredatorAnalysis:
             tcga: TCGA_CODE,
             snv_path: Path,
             prediction_data_path: Path,
+            prediction_id: RANDOM_ID,
             elaspic_core_path: Path,
             elaspic_interface_path: Path,
             reference_data_name: REFERENCE_DATA_NAME,
             reference_data_spec_cohort_path: Path,
             reference_data_path: Path
     ):
+
+        log.info(" - - Predator Analysis - - ")
+        log.info(f"TCGA: {tcga}")
+        log.info(f"PREDICTION ID: {prediction_id}")
+
         self.tcga = tcga
         self.snv_path = snv_path
         self.prediction_data_path = prediction_data_path
+        self.prediction_id = prediction_id
         self.elaspic_core_path = elaspic_core_path
         self.elaspic_interface_path = elaspic_interface_path
         self.reference_data_name = reference_data_name
