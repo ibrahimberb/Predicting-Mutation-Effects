@@ -24,11 +24,11 @@ def get_file_path(project_common_file_dir, filename):
 
 
 def export_data(
-    folder_path: Path,
-    data: DataFrame,
-    file_name: str,
-    file_extension='csv',
-    overwrite=False
+        folder_path: Path,
+        data: DataFrame,
+        file_name: str,
+        file_extension='csv',
+        overwrite=False
 ) -> None:
     """
     A helper function to export given data with specified name and extension.
@@ -50,15 +50,29 @@ def export_data(
         log.info(f'{file_name} is exported successfully.')
 
 
+def get_random_id(path):
+    import uuid
+
+    while True:
+        random_id = uuid.uuid4().hex[:8]
+        id_path = os.path.join(path, random_id)
+        is_valid = not os.path.isdir(id_path)
+
+        if is_valid:
+            # Path(path).mkdir(parents=True)
+            log.debug(f"Results folder with ID {random_id} is created.")
+            return random_id
+
+
 def export_prediction_data(
-    tcga,
-    data,
-    file_name,
-    folder_path,
-    config,
-    overwrite,
-    voting,
-    file_extension='csv'
+        tcga,
+        data,
+        file_name,
+        folder_path,
+        config,
+        overwrite,
+        voting,
+        file_extension='csv'
 ) -> None:
     """
     A helper function to export given data with specified name and extension along with metadata.
@@ -66,7 +80,8 @@ def export_prediction_data(
     current_date = datetime.today().strftime('%Y-%m-%d')
     current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
-    folder_name = f"{tcga}_prediction_{current_date}"
+    random_id = get_random_id(folder_path)
+    folder_name = os.path.join(f"{tcga}_prediction_{current_date}", random_id)
     log.debug(f"Exporting data {file_name} at location {folder_path} in folder {folder_name}..")
 
     folder_path = os.path.join(folder_path, folder_name)
