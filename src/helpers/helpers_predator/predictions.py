@@ -16,6 +16,7 @@ from .predictions_utils import (
     add_votes,
     add_voted_probs,
     take_avg,
+    take_median,
 )
 
 import logging
@@ -261,6 +262,7 @@ class PredictionsHard(Predictions):
             tcga, tcga_datasets
         )
 
+        log.debug(f"Handling valid and invalid entries ..")
         tcga_predicted_valid_datasets = []
         tcga_predicted_invalid_datasets = []
         for m in tqdm(range(self.n_models)):
@@ -313,6 +315,7 @@ class PredictionsSoft(Predictions):
             tcga, tcga_datasets
         )
 
+        log.debug(f"Handling valid and invalid entries ..")
         tcga_predicted_valid_datasets = []
         tcga_predicted_invalid_datasets = []
         for m in tqdm(range(self.n_models)):
@@ -333,10 +336,10 @@ class PredictionsSoft(Predictions):
         self.prepare_finalized_prediction_datasets(tcga, tcga_predicted_valid_datasets)
         log.debug(f"Post processing completed for {tcga}.")
 
-    def prepare_ensemble_prediction_data(self, tcga, tcga_data):
+    def prepare_ensemble_prediction_data(self, tcga, tcga_data, take="median"):
         # FIXME: REFORMATTING ...
-        log.debug(f'{__class__.__name__}')
-        log.debug(f"Preparing ensemble prediction data for {tcga} ..")
+        log.info(f'{__class__.__name__}')
+        log.info(f"Preparing ensemble prediction data for {tcga} taking {take} ..")
         tcga_ensemble_prediction_data = get_triplet_columns(tcga_data)
         tcga_ensemble_prediction_data = convert_primary_isomer(
             "Interactor_UniProt_ID", tcga_ensemble_prediction_data
@@ -351,9 +354,17 @@ class PredictionsSoft(Predictions):
 
         tcga_predictions_prob_data = remove_triplet_columns(tcga_ensemble_prediction_data)
 
-        tcga_predictions_prob_data['PROB_1s_AVG'] = tcga_predictions_prob_data.apply(
-            take_avg, axis=1
-        )
+        # TODO: change variable name `PROB_1s_AVG`.
+        if take == "average":
+            tcga_predictions_prob_data['PROB_1s_AVG'] = tcga_predictions_prob_data.apply(
+                take_avg, axis=1
+            )
+        elif take == "median":
+            tcga_predictions_prob_data['PROB_1s_AVG'] = tcga_predictions_prob_data.apply(
+                take_median, axis=1
+            )
+        else:
+            raise ValueError(f"Invalid value for parameter `take`: {take}")
 
         # If probability of being class 1 is greater than or equal to 0.50,
         # it is assigned as class 1.

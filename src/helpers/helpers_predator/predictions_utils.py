@@ -340,6 +340,18 @@ def take_avg(x):
         return round(np.mean([e for e in x if e != 'NO_VOTE']), 5)
 
 
+def take_median(x):
+    """
+    Returns the median of probabilities of class 1.
+    If number of NO_VOTE are more than half, returns NO_VOTE.
+    """
+    n_no_votes = len([e for e in x if e == 'NO_VOTE'])
+    if n_no_votes >= (len(x) / 2):
+        return "NO_VOTE"
+    else:
+        return round(np.median([e for e in x if e != 'NO_VOTE']), 5)
+
+
 def add_voted_probs(
         data: DataFrame,
         final_prediction_datasets: List[DataFrame]
