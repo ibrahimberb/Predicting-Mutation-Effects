@@ -227,7 +227,7 @@ def drop_invalid_predicted_entries(data: DataFrame):
 
 
 def are_all_valid_predictions(prediction_probs):
-    return all(prediction_probs >= 0.50) or all(prediction_probs < 0.50)
+    return all(prediction_probs > 0.50) or all(prediction_probs <= 0.50)
 
 
 def drop_invalid_predicted_probs_entries(data: DataFrame):

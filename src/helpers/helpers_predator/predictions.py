@@ -369,13 +369,13 @@ class PredictionsSoft(Predictions):
         # If probability of being class 1 is greater than or equal to 0.50,
         # it is assigned as class 1.
         # tcga_predictions_prob_data['VOTED_PREDICTION'] = (
-        #     (tcga_predictions_prob_data['PROB_1s_AVG'] >= 0.50).astype('int')
+        #     (tcga_predictions_prob_data['PROB_1s_AVG'] > 0.50).astype('int')
         # )
 
-        # Unless PROB_1s_AVG is NO_VOTE, if probability of being class 1 is greater than or equal to 0.50,
+        # Unless PROB_1s_AVG is NO_VOTE, if probability of being class 1 is greater than 0.50,
         # it is assigned as class 1.
         tcga_predictions_prob_data['VOTED_PREDICTION'] = tcga_predictions_prob_data['PROB_1s_AVG'].apply(
-            lambda x: 'NO_VOTE' if x == 'NO_VOTE' else int(float(x) >= 0.50)
+            lambda x: 'NO_VOTE' if x == 'NO_VOTE' else int(float(x) > 0.50)
         )
 
         self[f"{tcga}_predictions_prob_data"] = tcga_predictions_prob_data
