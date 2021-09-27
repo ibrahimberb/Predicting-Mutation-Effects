@@ -162,7 +162,7 @@ def preprocess_train_data(train_data, initial_columns_path):
 
 def preprocess_tcga_data(tcga_data, initial_columns_path):
     initial_columns_tcga = get_initial_columns_tcga(initial_columns_path)
-    tcga_data = reduce_columns_train(tcga_data, initial_columns_tcga)
+    tcga_data = reduce_columns_tcga(tcga_data, initial_columns_tcga)
     target_tcga_data = type_coercion_data(tcga_data)
     return target_tcga_data
 
