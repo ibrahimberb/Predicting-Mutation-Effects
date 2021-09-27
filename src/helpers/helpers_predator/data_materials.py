@@ -25,7 +25,7 @@ class DataMaterials(dict):
 
     def initialize_model_data_materials(self):
         """
-        Instanticates datasetes into labels and features for machine learning.
+        Instantiate datasets into labels and features for machine learning.
         Includes train and validations splits as well.
         """
         log.debug("Initializing model datasets ..")
