@@ -101,7 +101,7 @@ class ShapFeatureSelector:
         if extract:
             log.debug("Extracting rankings ..")
             data.to_csv(filename, index=False)
-            log.debug(f"Rankings are extracted to file {filename}.")
+            log.info(f"Rankings are extracted to file {filename}.")
 
         return data.head()
 
