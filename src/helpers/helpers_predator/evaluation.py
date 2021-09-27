@@ -286,10 +286,15 @@ class EvaluationValid:
             "Models_type": "Tuned+FeatureSelected"
         })
 
-        tuned_balanced_acc_median = tuned_data['Balan_acc_scores'].median()
-        log.info(f"tuned_balanced_acc_median: {tuned_balanced_acc_median}")
+        # Displaying `default_data`, `feature_selected_data` or `tuned_data`.
+        display(tuned_data)
 
-        bad_models_ix = list(tuned_data[tuned_data["Balan_acc_scores"] < tuned_balanced_acc_median]["Experiment"])
+        print(tuned_data.describe())
+
+        balanced_acc_threshold = tuned_data["Balan_acc_scores"].quantile(0.25)
+        log.info(f"balanced_acc_threshold: {balanced_acc_threshold}")
+
+        bad_models_ix = list(tuned_data[tuned_data["Balan_acc_scores"] < balanced_acc_threshold]["Experiment"])
         log.info(f"bad_models_ix: {bad_models_ix}")
 
         # remove bad_models_ix and add the another box plot
@@ -318,10 +323,10 @@ class EvaluationValid:
         self.comparison_data = comparison_data
 
         sns.catplot(x='METRIC', y='SCORES', hue='Models_type', data=df_melted, kind=kind)
-        # plt.axhline(y=0.7406060606060606, color='r', linestyle='--')
-        # plt.axhline(y=0.6838852813852813, color='r', linestyle='--')
-        plt.axhline(y=0.7424242424242424, color='b', linestyle='--')
-        plt.axhline(y=0.6920995670995671, color='b', linestyle='--')
+        # plt.axhline(y=0.7424242424242424, color='b', linestyle='--')
+        # plt.axhline(y=0.6920995670995671, color='b', linestyle='--')
+
+        plt.axhline(y=0.617560, color='r', linestyle='--')
 
         df_concated = pd.concat(
             [default_data, feature_selected_data, tuned_data, tuned_qualified_data]
