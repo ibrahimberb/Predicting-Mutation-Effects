@@ -1,0 +1,9 @@
+HYPERPARAMETERS
+    N_ITER: 1
+    N_REPEATS_CV: 1
+    SEARCH_TYPE: randomized
+    PARAM_GRID: {'max_depth': [2, 5, 10], 'n_estimators': [10, 25, 50, 75, 100, 200, 400], 'min_samples_split': [2, 5], 'max_features': ['auto', 'sqrt', None], 'class_weight': ['balanced', None]}
+MAIN
+    N_EXPERIMENT: 50
+    ELIMINATE_MODELS: True
+    N_MODELS: 37
