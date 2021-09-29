@@ -54,6 +54,7 @@ def load_elaspic_core_data(tcga, elaspic_core_path, data_materials):
     log.debug(f"{tcga} ELASPIC CORE data size: {tcga_elaspic_core_data.shape}")
 
     tcga_elaspic_core_data_simplified = simplify_elaspic_data(tcga_elaspic_core_data)
+    tcga_elaspic_core_data_simplified.drop_duplicates(keep="first", inplace=True)
 
     assert tcga_elaspic_core_data_simplified.duplicated().sum() == 0  # No duplicated entries in ELASPIC core data.
 
