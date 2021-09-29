@@ -1,0 +1,4 @@
+Method,default,default_ov,baseline_nonzero,baseline_nonzero_ov
+BASELINE,0.580,0.699,0.549,0.655
+OURS,0.558,0.673,0.555,0.665
+ELASPIC_COV,0.529,0.569,0.546,0.625
