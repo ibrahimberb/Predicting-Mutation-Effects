@@ -111,13 +111,18 @@ class FineTuner:
 
         clf = get_default_classifier(random_state=random_seed)
 
-        randomized_search = RandomizedSearchCV(clf, self.param_grid, n_iter=self.n_iter,
-                                               ## TODO, change n_iter to 10, (or some other num.)
-                                               random_state=random_seed,
-                                               cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=self.n_repeats_cv,
-                                                                          random_state=random_seed),
-                                               scoring='balanced_accuracy',
-                                               return_train_score=True, n_jobs=self.n_jobs, verbose=self.verbose)
+        randomized_search = RandomizedSearchCV(
+            clf, self.param_grid,
+            n_iter=self.n_iter,  # TODO, change n_iter to 10, (or some other num.)
+            random_state=random_seed,
+            cv=RepeatedStratifiedKFold(
+                n_splits=10, n_repeats=self.n_repeats_cv, random_state=random_seed
+            ),
+            scoring='balanced_accuracy',
+            return_train_score=True,
+            n_jobs=self.n_jobs,
+            verbose=self.verbose
+        )
 
         return randomized_search
 
@@ -125,11 +130,17 @@ class FineTuner:
 
         clf = get_default_classifier(random_state=random_seed)
 
-        grid_search = GridSearchCV(clf, self.param_grid,
-                                   cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=self.n_repeats_cv,
-                                                              random_state=random_seed),
-                                   scoring='balanced_accuracy',
-                                   return_train_score=True, n_jobs=self.n_jobs, verbose=self.verbose)
+        grid_search = GridSearchCV(
+            clf,
+            self.param_grid,
+            cv=RepeatedStratifiedKFold(
+                n_splits=10, n_repeats=self.n_repeats_cv, random_state=random_seed
+            ),
+            scoring='balanced_accuracy',
+            return_train_score=True,
+            n_jobs=self.n_jobs,
+            verbose=self.verbose
+        )
 
         return grid_search
 
@@ -142,8 +153,10 @@ class FineTuner:
                 self.randomized_search_objects[exp].best_estimator_,
                 self.randomized_search_objects[exp].best_score_]
 
-        classifiers_attributes_data = pd.DataFrame(experiment_repeat_to_randomized_search_info,
-                                                   index=['best_params_', 'best_estimator_', 'best_score_']).T
+        classifiers_attributes_data = pd.DataFrame(
+            experiment_repeat_to_randomized_search_info,
+            index=['best_params_', 'best_estimator_', 'best_score_']
+        ).T
 
         self.classifiers_attributes_data = classifiers_attributes_data
 
