@@ -8,7 +8,7 @@
         # elaspic_cov_vs_cgc_status_tcga_data = preliminary_data[["ELASPIC_COVERAGE", ref_gene_column_cohort]].copy()
         #
         # fpr_baseline, tpr_baseline, ths_baseline = get_fpr_tpr_ths(
-        #     np.array(baseline_counts_vs_cgc_status_data["CancerMine_STATUS"]),  # FIXME: ref_gene_column
+        #     np.array(baseline_counts_vs_cgc_status_data["CancerMine_STATUS"]),  # FIX-ME: ref_gene_column
         #     np.array(baseline_counts_vs_cgc_status_data["BASELINE"]))
         #
         # fpr_our_method, tpr_our_method, ths_our_method = get_fpr_tpr_ths(
