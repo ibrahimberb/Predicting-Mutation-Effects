@@ -1,6 +1,6 @@
 # taken from https://xsnippet.org/359377/
 
-# TODO: modification https://stackoverflow.com/questions/20333674/pycharm-logging-output-colours
+# TO-DO: modification https://stackoverflow.com/questions/20333674/pycharm-logging-output-colours
 #  but I have already handled the case (I guess..)
 
 import sys
