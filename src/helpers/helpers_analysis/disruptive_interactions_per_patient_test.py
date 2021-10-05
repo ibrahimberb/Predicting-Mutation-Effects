@@ -1,13 +1,30 @@
 import os
+import time
 from pathlib import Path
 from unittest import TestCase
 import re
+import pandas as pd
+import numpy as np
+import requests
+from tqdm.auto import tqdm
 
 from .disruptive_interactions_per_patient import DisruptiveInteractionsPerPatient
 
+from ..helpers_analysis.get_protein_to_gene_dict import get_protein_to_gene_dict
+
+from ..mylogger import get_handler
+import logging
+
+handler = get_handler(log_type="module")
+
+log = logging.getLogger(__name__)
+log.handlers[:] = []
+log.addHandler(handler)
+log.setLevel(logging.DEBUG)
+
 
 class TestDisruptiveInteractionsPerPatient(TestCase):
-    os.chdir("../")
+    # os.chdir("../")
 
     PREDICTION_ID = "acf35ed1/"
     PREDICTIONS_COMMON_PATH = "../data/predictions_datasets/brca_prediction_2021-09-28/" + PREDICTION_ID
@@ -22,7 +39,8 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
         self.disruptive_interactions_per_patient = DisruptiveInteractionsPerPatient(
             tcga="brca",
             prediction_data_path=self.PREDICTION_BRCA_REDUCED_PATH,
-            tcga_snv_path=self.SNV_PATH
+            tcga_snv_path=self.SNV_PATH,
+            identifier="uniprot"
         )
 
     def test_load_snv_data_simplified(self):
@@ -85,17 +103,22 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
 
         if self.disruptive_interactions_per_patient.tcga == "BRCA":
 
-            self.assertNotEqual(
-                self.disruptive_interactions_per_patient.get_disruptive_predicted_interactions(
-                    "Q01196", "G95R"
-                ), []
-            )
+            if self.disruptive_interactions_per_patient.identifier == "uniprot":
 
-            self.assertNotEqual(
-                self.disruptive_interactions_per_patient.get_disruptive_predicted_interactions(
-                    "P00747", "D665H"
-                ), []
-            )
+                self.assertNotEqual(
+                    self.disruptive_interactions_per_patient.get_disruptive_predicted_interactions(
+                        "Q01196", "G95R"
+                    ), []
+                )
+
+                self.assertNotEqual(
+                    self.disruptive_interactions_per_patient.get_disruptive_predicted_interactions(
+                        "P00747", "D665H"
+                    ), []
+                )
+
+            elif self.disruptive_interactions_per_patient.identifier == "hugo":
+                pass
 
         else:
             raise ValueError("TCGA falls outside test cases.")
@@ -107,6 +130,7 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
             ), []
         )
 
+    # FIXME
     def test_patient_to_disruptive_interactions(self):
         patient_to_disruptive_interactions = self.disruptive_interactions_per_patient.patient_to_disruptive_interactions
 
@@ -132,7 +156,7 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
                 patient_search_data = patient_snv_data[
                     (patient_snv_data["SWISSPROT"] == protein) &
                     (patient_snv_data["HGVSp_Short"] == mutation)
-                ]
+                    ]
 
                 self.assertFalse(patient_search_data.empty, msg="data is not empty")
 
@@ -140,7 +164,7 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
                     (prediction_data["UniProt_ID"] == protein) &
                     (prediction_data["Mutation"] == mutation) &
                     (prediction_data["Interactor_UniProt_ID"] == interactor)
-                ]
+                    ]
 
                 # Assert there is only one row.
                 self.assertEqual(len(prediction_search_data), 1)
@@ -156,7 +180,7 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
                     (disruptive_prediction_data["UniProt_ID"] == protein) &
                     (disruptive_prediction_data["Mutation"] == mutation) &
                     (disruptive_prediction_data["Interactor_UniProt_ID"] == interactor)
-                ]
+                    ]
 
                 # Assert there is only one row.
                 self.assertEqual(len(disruptive_prediction_search_data), 1)
@@ -173,3 +197,153 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
                     prediction_search_data.equals(disruptive_prediction_search_data),
                     "datasets are not identical."
                 )
+
+    def validate_results_single_patient(self, patient):
+        snv_data = self.disruptive_interactions_per_patient.snv_data_simplified
+        disruptive_prediction_data = self.disruptive_interactions_per_patient.disruptive_prediction_data
+        patient_snv_data = snv_data[snv_data["Tumor_Sample_Barcode"] == patient]
+
+        assert patient_snv_data.equals(
+            self.disruptive_interactions_per_patient.patient_to_snv_data[patient]
+        )
+
+        patient_disruptive_interactions = (
+            self.disruptive_interactions_per_patient.patient_to_disruptive_interactions[patient]
+        )
+
+        for disruptive_interactions in patient_disruptive_interactions:
+            protein, mutation, interactor = disruptive_interactions
+
+            self.assertFalse(
+                patient_snv_data[
+                    (patient_snv_data["SWISSPROT"] == protein) &
+                    (patient_snv_data["HGVSp_Short"] == mutation)
+                    ].empty,
+                msg="patient_snv_data is empty!"
+            )
+
+    def test_validate_results(self):
+        for patient in self.disruptive_interactions_per_patient.patients:
+            self.validate_results_single_patient(patient)
+
+    def test_uniprot_gene_conversion_with_SNV(self):
+        """
+        The SNV data also contains a column for Hugo Gene ID.
+        Here, we test whether we could retrieve correct gene id from Uniprot API
+        by comparing it with the one in SNV data.
+        """
+
+        log.debug(f"Loading SNV data: {self.SNV_PATH}")
+        snv_data = pd.read_csv(self.SNV_PATH, low_memory=False)
+        log.debug("SNV data loaded.")
+
+        prediction_data = self.disruptive_interactions_per_patient.prediction_data
+        self_proteins = list(prediction_data["UniProt_ID"].unique())
+        interactor_proteins = list(prediction_data["Interactor_UniProt_ID"].unique())
+        proteins = sorted(set(self_proteins + interactor_proteins))
+
+        log.debug(f"len self_proteins: {len(self_proteins)}")
+        log.debug(f"len interactor_proteins: {len(interactor_proteins)}")
+        log.debug(f"len proteins: {len(proteins)}")
+
+        protein_to_gene_dict = get_protein_to_gene_dict(proteins, snv_data)
+        brca_exception_proteins = []
+
+        for protein in tqdm(proteins):
+            log.info(f"\nCURRENT PROTEIN: {protein}")
+            if protein_to_gene_dict[protein] == "NA":
+                log.error(f"PROTEIN: {protein} IS `NA` IN SNV DATA.")
+                converted_gene = self.disruptive_interactions_per_patient.gene_retriever.fetch(protein)
+                converted_legacy_gene = self.get_gene_id_from_uniprot_regex_v1(protein)
+                log.debug(f"converted_gene:         {converted_gene}")
+                log.debug(f"converted_legacy_gene:  {converted_legacy_gene}")
+
+                self.assertTrue(
+                    (converted_gene == converted_legacy_gene) or
+                    (converted_gene is converted_legacy_gene)
+                )
+
+                log.warning(f"Retrieved from UNIPROT API: {converted_gene}")
+                continue
+
+            # Known exceptions
+            # TODO: extract these into a text file, because we might have more than 100 of these ..
+            #  and uses `tcga` too
+
+            # brca_exception_proteins = ["Q96QV6", "A2RTX5", "O43236", "O60260", "O75367", "P06576",
+            #                            "P06899"]
+            # exception_proteins = brca_exception_proteins
+
+            # if protein in exception_proteins:
+            #     log.warning(f"EXCEPTION PROTEIN: {protein}")
+            #     converted_gene = self.disruptive_interactions_per_patient.get_gene_id_from_uniprot(protein)
+            #     converted_legacy_gene = self.get_gene_id_from_uniprot_regex_v1(protein)
+            #     log.debug(f"converted_gene:         {converted_gene}")
+            #     log.debug(f"converted_legacy_gene:  {converted_legacy_gene}")
+            #     continue
+
+            actual_gene = protein_to_gene_dict[protein]
+            converted_gene = self.disruptive_interactions_per_patient.gene_retriever.fetch(protein)
+            converted_legacy_gene = self.get_gene_id_from_uniprot_regex_v1(protein)
+
+            log.debug(f"actual_gene:            {actual_gene}")
+            log.debug(f"converted_gene:         {converted_gene}")
+            log.debug(f"converted_legacy_gene:  {converted_legacy_gene}")
+
+            if converted_gene == "N/A" or converted_legacy_gene == "N/A":
+                log.error("CANNOT FIND CONVERTED GENE ID IN DATABASE ..")
+                continue
+
+            try:
+                self.assertTrue(converted_gene == converted_legacy_gene == actual_gene)
+                self.assertEqual(converted_gene, converted_legacy_gene)
+                self.assertEqual(actual_gene, converted_gene)
+            except AssertionError:
+                log.critical(f"EXCEPTIONAL PROTEIN: {protein}. ADDING TO LIST ..")
+                brca_exception_proteins.append((protein, actual_gene, converted_gene))
+
+        with open("brca_exceptions.txt", "w") as file:
+            log.info("WRITING TO FILE ...")
+            for exception_protein, actual_gene, converted_gene in brca_exception_proteins:
+                file.write(f"{exception_protein}\t{actual_gene}\t{converted_gene}\n")
+
+            log.info("WRITING TO FILE COMPLETED.")
+
+        log.info("TEST `test_uniprot_gene_conversion` COMPLETE ...")
+
+    @staticmethod
+    def get_gene_id_from_uniprot_regex_v1(uniprot_id):
+
+        def get_gene_from_fasta_regex_v1(fasta_text):
+            info_line = fasta_text.split('\n')[0]
+            line_splitted = info_line.split()
+
+            pattern = re.compile(r"^GN=(.+)")
+            try:
+                [gene] = filter(pattern.match, line_splitted)
+            except ValueError:
+                log.warning(f"NO GENE ID FOUND FOR {uniprot_id}.")
+                return np.nan
+
+            gene = gene.replace("GN=", "")
+
+            return gene
+
+        log.debug("Retrieving sequence {} ...".format(uniprot_id))
+        address = "http://www.uniprot.org/uniprot/{}.fasta".format(uniprot_id)
+
+        n_attempt = 3
+        attempt = 0
+        while attempt < n_attempt:
+            r = requests.get(address)
+            if r.status_code == 200:
+                gene = get_gene_from_fasta_regex_v1(r.text)
+                return gene
+
+            attempt += 1
+            log.warning(f"attempt: {attempt}")
+            log.warning(f"status_code: {r.status_code}")
+            time.sleep(1)
+
+        log.critical(f"COULD NOT RETRIEVE GENE: {attempt}")
+        return np.nan
