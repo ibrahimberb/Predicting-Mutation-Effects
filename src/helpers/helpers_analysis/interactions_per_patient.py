@@ -19,8 +19,13 @@
 # import time
 #
 # import requests
+from collections import defaultdict
+from datetime import datetime
+
 from pandas import read_csv
+import pandas as pd
 from pathlib import Path
+import os.path as op
 
 from .loaders import load_snv_datasets
 
@@ -42,7 +47,7 @@ log.setLevel(logging.DEBUG)
 
 # TODO move on to the protein representation implementation
 #  in disruptive interactions per patient.
-class DisruptiveInteractionsPerPatient:
+class InteractionsPerPatient:
     def __init__(
             self,
             tcga: str,
@@ -52,7 +57,7 @@ class DisruptiveInteractionsPerPatient:
             verbose: bool = False
     ):
         """
-        Disruptive Interactions per Patient.
+        Interactions per Patient.
 
         Parameters
         ----------
@@ -86,11 +91,16 @@ class DisruptiveInteractionsPerPatient:
         self.patient_to_snv_data = None
         self.disruptive_prediction_data = None
         self.prediction_data = None
+        self.analysis_table = None
+
+        self.patient_to_interactions = None
         self.patient_to_disruptive_interactions = None
+
         self.uniprot_to_gene_id = None
         self.gene_retriever = GeneIDRetriever()
         self.load_materials()
 
+        self.find_all_interactions()
         self.find_disruptive_interactions()
 
         log.info("Disruptive interactions per patient completed.")
@@ -144,14 +154,31 @@ class DisruptiveInteractionsPerPatient:
             ]
         self.disruptive_prediction_data = disruptive_prediction_data
 
-    def get_disruptive_predicted_interactions(self, protein, mutation):
-        disruptive_predicted_interactions = self.disruptive_prediction_data[
+    def get_disruptive_interactors(self, protein, mutation):
+        disruptive_predicted_interactors = self.disruptive_prediction_data[
             (self.disruptive_prediction_data["UniProt_ID"] == protein) &
             (self.disruptive_prediction_data["Mutation"] == mutation) &
             (self.disruptive_prediction_data["Prediction"] == 0)  # Just to be double sure.
             ]["Interactor_UniProt_ID"].to_list()
 
-        return disruptive_predicted_interactions
+        return disruptive_predicted_interactors
+
+    def get_non_disruptive_interactors(self, protein, mutation):
+        non_disruptive_predicted_interactors = self.prediction_data[
+            (self.prediction_data["UniProt_ID"] == protein) &
+            (self.prediction_data["Mutation"] == mutation) &
+            (self.prediction_data["Prediction"] == 1)  # Class 1
+            ]["Interactor_UniProt_ID"].to_list()
+
+        return non_disruptive_predicted_interactors
+
+    def get_all_interactors(self, protein, mutation):
+        interactors = self.prediction_data[
+            (self.prediction_data["UniProt_ID"] == protein) &
+            (self.prediction_data["Mutation"] == mutation)
+            ]["Interactor_UniProt_ID"].to_list()
+
+        return interactors
 
     # def find_disruptive_interactions_single_patient(self, patient):
     #  # # # INCOMPLETE FUNCTION -- NOT NEEDED.
@@ -167,6 +194,35 @@ class DisruptiveInteractionsPerPatient:
     #         for interactor in disruptive_predicted_interactions:
     #             print(f"{protein}, {mutation}, {interactor}")
 
+    def find_all_interactions(self):
+        log.info("Finding all interactions (disruptive and non-disruptive) for each patient ..")
+        patient_to_interactions = {}
+        for patient in tqdm(self.patients):
+            if self.verbose:
+                log.debug(f"\tPATIENT: {patient}")
+            interactions = []
+            patient_snv_data = self.patient_to_snv_data[patient]
+
+            for index, row in patient_snv_data.iterrows():
+                protein = row["SWISSPROT"]
+                mutation = row["HGVSp_Short"]
+                # for current protein.mutation
+                all_interactors = self.get_all_interactors(
+                    protein, mutation
+                )
+
+                # Add triplets
+                for interactor in all_interactors:
+                    # log.debug(f"\t\interaction: {protein, mutation, interactor}")
+
+                    interactions.append(
+                        (protein, mutation, interactor)
+                    )
+
+            patient_to_interactions[patient] = interactions
+
+        self.patient_to_interactions = patient_to_interactions
+
     def find_disruptive_interactions(self):
         log.info("Finding disruptive interactions for each patient ..")
         patient_to_disruptive_interactions = {}
@@ -180,38 +236,39 @@ class DisruptiveInteractionsPerPatient:
                 protein = row["SWISSPROT"]
                 mutation = row["HGVSp_Short"]
                 # for current protein.mutation
-                disruptive_predicted_interactions = self.get_disruptive_predicted_interactions(
+                disruptive_predicted_interactions = self.get_disruptive_interactors(
                     protein, mutation
                 )
 
                 # Add disruptive predicted triplets
                 for interactor in disruptive_predicted_interactions:
                     # log.debug(f"\t\tDisruptive interaction: {protein, mutation, interactor}")
-                    if self.identifier == "uniprot":
-                        disruptive_interaction = (protein, mutation, interactor)
 
-                    elif self.identifier == "hugo":
-                        disruptive_interaction = (
-                            f"{protein}:{self.gene_retriever.fetch(protein)}",
-                            mutation,
-                            f"{interactor}:{self.gene_retriever.fetch(interactor)}",
-                        )
-
-                    else:
-                        raise ValueError("Invalid identifier")
-
-                    disruptive_interactions.append(disruptive_interaction)
+                    disruptive_interactions.append(
+                        (protein, mutation, interactor)
+                    )
 
             patient_to_disruptive_interactions[patient] = disruptive_interactions
 
         self.patient_to_disruptive_interactions = patient_to_disruptive_interactions
 
-    def print(self):
+    def print_disruptive_interactions_per_patient(self):
         """
         Prints the disruptive interactions for each patient.
         """
         for patient in self.patients:
-            print(f"{patient} -> {self.patient_to_disruptive_interactions[patient]}")
+            if self.identifier == "uniprot":
+                print(f"{patient} -> {self.patient_to_disruptive_interactions[patient]}")
+
+            elif self.identifier == "hugo":
+                protein, mutation, interactor = self.patient_to_disruptive_interactions[patient]
+                disruptive_interaction_hugo = (
+                    f"{protein}:{self.gene_retriever.fetch(protein)}",
+                    mutation,
+                    f"{interactor}:{self.gene_retriever.fetch(interactor)}",
+                )
+
+                print(f"{patient} -> {disruptive_interaction_hugo}")
 
     def load_uniprot_to_gene_id(self):
         log.info("Loading UniProt ID to Gene ID ..")
@@ -281,5 +338,102 @@ class DisruptiveInteractionsPerPatient:
     #
     #     return gene
 
-    def extract(self):
-        pass
+    def construct_analysis_table(self):
+        log.info("Constructing the analysis table ..")
+        patient_to_table_entry_set = defaultdict(list)  # Dictionary of list containing unique dictionaries.
+        patient_to_seen_protein_mutation_pairs = defaultdict(list)
+
+        for patient in tqdm(self.patients):
+            patient_disruptive_interactions = self.patient_to_disruptive_interactions[patient]
+
+            for protein, mutation, _ in patient_disruptive_interactions:
+                """
+                # unnecessary duplication: but DOES NOT work fine.
+                TCGA-A8-A093	P28062	R216W	['P40306']
+                TCGA-A8-A093	Q15842	E237K	['Q14654', 'P63252']  
+                TCGA-A8-A093	Q15842	E237K	['Q14654', 'P63252']  <- duplicated entries
+                """
+                # Skipping unnecessary duplication.
+                if (protein, mutation) in patient_to_seen_protein_mutation_pairs[patient]:
+                    continue
+
+                interactors = self.get_all_interactors(protein, mutation)
+                disruptive_interactors = self.get_disruptive_interactors(protein, mutation)
+                non_disruptive_interactors = self.get_non_disruptive_interactors(protein, mutation)
+
+                print(
+                    f"{patient}\t{protein}\t{mutation}\tAll interactors: {interactors}"
+                )
+
+                patient_to_seen_protein_mutation_pairs[patient].append((protein, mutation))
+
+                # Adding table info to table_values_set.
+                patient_to_table_entry_set[patient].append(
+                    {
+                        "PATIENT": patient,
+
+                        "PROTEIN_GENE": f"{protein}:{self.gene_retriever.fetch(protein)}",
+
+                        "MUTATION": mutation,
+
+                        # All Interactors
+                        "INTERACTORS": ','.join(
+                            map(str, map(lambda x: f"{x}:{self.gene_retriever.fetch(x)}", interactors))
+                        ),
+                        "NUM_INTERACTORS": len(interactors),
+
+                        # Disruptive Interactors
+                        "DISRUPTIVE_INTERACTORS": ','.join(
+                            map(str, map(lambda x: f"{x}:{self.gene_retriever.fetch(x)}", disruptive_interactors))
+                        ),
+                        "NUM_DISRUPTIVE_INTERACTORS": len(disruptive_interactors),
+
+                        # Non-Disruptive Interactors
+                        "NON_DISRUPTIVE_INTERACTORS": ','.join(
+                            map(str, map(lambda x: f"{x}:{self.gene_retriever.fetch(x)}", non_disruptive_interactors))
+                        ),
+                        "NUM_NON_DISRUPTIVE_INTERACTORS": len(non_disruptive_interactors),
+                    }
+                )
+
+            print('-' * 100)
+
+        analysis_table_entries = []
+        for patient, table_entry_set in patient_to_table_entry_set.items():
+            for table_entry_dict in table_entry_set:
+                # Add table entry dictionary.
+                analysis_table_entries.append(table_entry_dict)
+
+        analysis_table = pd.DataFrame(
+            analysis_table_entries,
+            columns=[
+                "PATIENT",
+                "PROTEIN_GENE",
+                "MUTATION",
+                "INTERACTORS",
+                "NUM_INTERACTORS",
+                "DISRUPTIVE_INTERACTORS",
+                "NUM_DISRUPTIVE_INTERACTORS",
+                "NON_DISRUPTIVE_INTERACTORS",
+                "NUM_NON_DISRUPTIVE_INTERACTORS",
+            ]
+        )
+
+        self.analysis_table = analysis_table
+        log.info("Analysis table constructed.")
+
+    def extract(self, folder=None):
+        output_file_date = datetime.today().strftime('%Y-%m-%d')
+        filename = f"{self.tcga}_patient_interactions_analysis_table_{output_file_date}.xlsx"
+
+        if folder is not None:
+            filename = op.join(folder, filename)
+
+        # Ensure the file is not exists before creating to prevent overwriting.
+        if op.isfile(filename):
+            log.warning(f'File {filename} is already exist.')
+
+        else:
+            # Export
+            self.analysis_table.to_excel(filename, index=False)
+            log.info(f'{filename} is exported.')

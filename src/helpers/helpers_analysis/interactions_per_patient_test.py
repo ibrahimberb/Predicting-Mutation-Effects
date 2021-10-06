@@ -8,7 +8,7 @@ import numpy as np
 import requests
 from tqdm.auto import tqdm
 
-from .disruptive_interactions_per_patient import DisruptiveInteractionsPerPatient
+from .interactions_per_patient import InteractionsPerPatient
 
 from ..helpers_analysis.get_protein_to_gene_dict import get_protein_to_gene_dict
 
@@ -23,35 +23,40 @@ log.addHandler(handler)
 log.setLevel(logging.DEBUG)
 
 
-class TestDisruptiveInteractionsPerPatient(TestCase):
+class TestInteractionsPerPatient(TestCase):
     # os.chdir("../")
 
-    PREDICTION_ID = "acf35ed1/"
-    PREDICTIONS_COMMON_PATH = "../data/predictions_datasets/brca_prediction_2021-09-28/" + PREDICTION_ID
-    PREDICTION_BRCA_REDUCED_PATH = PREDICTIONS_COMMON_PATH + "predictions_soft_2021-09-28.csv"
+    BRCA_PREDICTION_ID = "acf35ed1/"
+    BRCA_PREDICTIONS_COMMON_PATH = "../data/predictions_datasets/brca_prediction_2021-09-28/" + BRCA_PREDICTION_ID
+    PREDICTION_BRCA_REDUCED_PATH = BRCA_PREDICTIONS_COMMON_PATH + "predictions_soft_2021-09-28.csv"
     PREDICTION_BRCA_REDUCED_PATH = Path(PREDICTION_BRCA_REDUCED_PATH)
 
+    OV_PREDICTION_ID = "d872749a/"
+    OV_PREDICTIONS_COMMON_PATH = "../data/predictions_datasets/ov_prediction_2021-09-28/" + OV_PREDICTION_ID
+    PREDICTION_OV_REDUCED_PATH = OV_PREDICTIONS_COMMON_PATH + "predictions_soft_2021-09-28.csv"
+    PREDICTION_OV_REDUCED_PATH = Path(PREDICTION_OV_REDUCED_PATH)
+
     SNV_COMMON_PATH = "C:/Users/ibrah/Desktop/TUSEB_Study/Data_Collection_and_Filtering/SNV/"
-    SNV_PATH = os.path.join(SNV_COMMON_PATH, "SNV_BRCA_hg38.csv")
-    SNV_PATH = Path(SNV_PATH)
+    BRCA_SNV_PATH = Path(os.path.join(SNV_COMMON_PATH, "SNV_BRCA_hg38.csv"))
+    OV_SNV_PATH = Path(os.path.join(SNV_COMMON_PATH, "SNV_OV_hg38.csv"))
 
     def setUp(self) -> None:
-        self.disruptive_interactions_per_patient = DisruptiveInteractionsPerPatient(
+        self.inter_per_pat = InteractionsPerPatient(
             tcga="brca",
             prediction_data_path=self.PREDICTION_BRCA_REDUCED_PATH,
-            tcga_snv_path=self.SNV_PATH,
+            tcga_snv_path=self.BRCA_SNV_PATH,
             identifier="uniprot"
         )
 
     def test_load_snv_data_simplified(self):
-        snv_data_simplified = self.disruptive_interactions_per_patient.snv_data_simplified
+        snv_data_simplified = self.inter_per_pat.snv_data_simplified
         columns_list = ["Hugo_Symbol", "SWISSPROT", "HGVSp_Short", "Tumor_Sample_Barcode"]
         self.assertEqual(snv_data_simplified.columns.to_list(), columns_list)
 
     def test_get_patient_snv_data(self):
-        patients = self.disruptive_interactions_per_patient.patients
+        patients = self.inter_per_pat.patients
         for patient in patients:
-            patient_snv_data = self.disruptive_interactions_per_patient.get_patient_snv_data(
+            patient_snv_data = self.inter_per_pat.get_patient_snv_data(
                 patient
             )
 
@@ -62,7 +67,7 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
             )
 
     def test_patient_ids_are_valid(self):
-        patient_ids = self.disruptive_interactions_per_patient.patients
+        patient_ids = self.inter_per_pat.patients
         match = re.compile(r"^TCGA-(\w\w)-(\w\w\w\w)$")
         for patient in patient_ids:
             self.assertIsNotNone(
@@ -70,8 +75,8 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
             )
 
     def test_load_patient_to_snv_data(self):
-        patient_to_snv_data = self.disruptive_interactions_per_patient.patient_to_snv_data
-        patients = self.disruptive_interactions_per_patient.patients
+        patient_to_snv_data = self.inter_per_pat.patient_to_snv_data
+        patients = self.inter_per_pat.patients
 
         self.assertEqual(
             type(patient_to_snv_data), dict
@@ -82,7 +87,7 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
         )
 
     def test_load_prediction_data(self):
-        prediction_data = self.disruptive_interactions_per_patient.prediction_data
+        prediction_data = self.inter_per_pat.prediction_data
 
         self.assertEqual(prediction_data.empty, False)
 
@@ -92,7 +97,7 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
         )
 
     def test_load_disruptive_prediction_data(self):
-        disruptive_prediction_data = self.disruptive_interactions_per_patient.disruptive_prediction_data
+        disruptive_prediction_data = self.inter_per_pat.disruptive_prediction_data
 
         self.assertEqual(
             set(disruptive_prediction_data["Prediction"].value_counts().index),
@@ -101,23 +106,23 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
 
     def test_get_disruptive_predicted_interactions(self):
 
-        if self.disruptive_interactions_per_patient.tcga == "BRCA":
+        if self.inter_per_pat.tcga == "BRCA":
 
-            if self.disruptive_interactions_per_patient.identifier == "uniprot":
+            if self.inter_per_pat.identifier == "uniprot":
 
                 self.assertNotEqual(
-                    self.disruptive_interactions_per_patient.get_disruptive_predicted_interactions(
+                    self.inter_per_pat.get_disruptive_interactors(
                         "Q01196", "G95R"
                     ), []
                 )
 
                 self.assertNotEqual(
-                    self.disruptive_interactions_per_patient.get_disruptive_predicted_interactions(
+                    self.inter_per_pat.get_disruptive_interactors(
                         "P00747", "D665H"
                     ), []
                 )
 
-            elif self.disruptive_interactions_per_patient.identifier == "hugo":
+            elif self.inter_per_pat.identifier == "hugo":
                 pass
 
         else:
@@ -125,16 +130,16 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
 
         # A fail case.
         self.assertEqual(
-            self.disruptive_interactions_per_patient.get_disruptive_predicted_interactions(
+            self.inter_per_pat.get_disruptive_interactors(
                 "P123123", "MUT123"
             ), []
         )
 
     # FIXME
     def test_patient_to_disruptive_interactions(self):
-        patient_to_disruptive_interactions = self.disruptive_interactions_per_patient.patient_to_disruptive_interactions
+        patient_to_disruptive_interactions = self.inter_per_pat.patient_to_disruptive_interactions
 
-        if self.disruptive_interactions_per_patient.tcga == "BRCA":
+        if self.inter_per_pat.tcga == "BRCA":
             self.assertEqual(
                 len(patient_to_disruptive_interactions), 985
             )
@@ -144,12 +149,12 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
 
     def test_find_disruptive_interactions(self):
 
-        patient_to_disruptive_interactions = self.disruptive_interactions_per_patient.patient_to_disruptive_interactions
-        prediction_data = self.disruptive_interactions_per_patient.prediction_data
-        disruptive_prediction_data = self.disruptive_interactions_per_patient.disruptive_prediction_data
+        patient_to_disruptive_interactions = self.inter_per_pat.patient_to_disruptive_interactions
+        prediction_data = self.inter_per_pat.prediction_data
+        disruptive_prediction_data = self.inter_per_pat.disruptive_prediction_data
 
         for patient, disruptive_triplets in patient_to_disruptive_interactions.items():
-            patient_snv_data = self.disruptive_interactions_per_patient.get_patient_snv_data(patient)
+            patient_snv_data = self.inter_per_pat.get_patient_snv_data(patient)
             for disruptive_triplet in disruptive_triplets:
                 protein, mutation, interactor = disruptive_triplet
 
@@ -198,17 +203,17 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
                     "datasets are not identical."
                 )
 
-    def validate_results_single_patient(self, patient):
-        snv_data = self.disruptive_interactions_per_patient.snv_data_simplified
-        disruptive_prediction_data = self.disruptive_interactions_per_patient.disruptive_prediction_data
+    def validate_disruptive_interactions_single_patient(self, patient):
+        snv_data = self.inter_per_pat.snv_data_simplified
+        disruptive_prediction_data = self.inter_per_pat.disruptive_prediction_data
         patient_snv_data = snv_data[snv_data["Tumor_Sample_Barcode"] == patient]
 
         assert patient_snv_data.equals(
-            self.disruptive_interactions_per_patient.patient_to_snv_data[patient]
+            self.inter_per_pat.patient_to_snv_data[patient]
         )
 
         patient_disruptive_interactions = (
-            self.disruptive_interactions_per_patient.patient_to_disruptive_interactions[patient]
+            self.inter_per_pat.patient_to_disruptive_interactions[patient]
         )
 
         for disruptive_interactions in patient_disruptive_interactions:
@@ -222,9 +227,55 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
                 msg="patient_snv_data is empty!"
             )
 
-    def test_validate_results(self):
-        for patient in self.disruptive_interactions_per_patient.patients:
-            self.validate_results_single_patient(patient)
+            self.assertFalse(
+                disruptive_prediction_data[
+                    (disruptive_prediction_data["UniProt_ID"] == protein) &
+                    (disruptive_prediction_data["Mutation"] == mutation) &
+                    (disruptive_prediction_data["Interactor_UniProt_ID"] == interactor)
+                    ].empty,
+                msg="patient_snv_data is empty!"
+            )
+
+    def test_validate_disruptive_interactions_per_patient(self):
+        for patient in self.inter_per_pat.patients:
+            self.validate_disruptive_interactions_single_patient(patient)
+
+    def validate_all_interactions_single_patient(self, patient):
+        snv_data = self.inter_per_pat.snv_data_simplified
+        prediction_data = self.inter_per_pat.prediction_data
+        patient_snv_data = snv_data[snv_data["Tumor_Sample_Barcode"] == patient]
+
+        assert patient_snv_data.equals(
+            self.inter_per_pat.patient_to_snv_data[patient]
+        )
+
+        patient_all_interactions = (
+            self.inter_per_pat.patient_to_interactions[patient]
+        )
+
+        for interactions in patient_all_interactions:
+            protein, mutation, interactor = interactions
+
+            self.assertFalse(
+                patient_snv_data[
+                    (patient_snv_data["SWISSPROT"] == protein) &
+                    (patient_snv_data["HGVSp_Short"] == mutation)
+                    ].empty,
+                msg="patient_snv_data is empty!"
+            )
+
+            self.assertFalse(
+                prediction_data[
+                    (prediction_data["UniProt_ID"] == protein) &
+                    (prediction_data["Mutation"] == mutation) &
+                    (prediction_data["Interactor_UniProt_ID"] == interactor)
+                    ].empty,
+                msg="patient_snv_data is empty!"
+            )
+
+    def test_validate_all_interactions_per_patient(self):
+        for patient in self.inter_per_pat.patients:
+            self.validate_all_interactions_single_patient(patient)
 
     def test_uniprot_gene_conversion_with_SNV(self):
         """
@@ -237,7 +288,7 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
         snv_data = pd.read_csv(self.SNV_PATH, low_memory=False)
         log.debug("SNV data loaded.")
 
-        prediction_data = self.disruptive_interactions_per_patient.prediction_data
+        prediction_data = self.inter_per_pat.prediction_data
         self_proteins = list(prediction_data["UniProt_ID"].unique())
         interactor_proteins = list(prediction_data["Interactor_UniProt_ID"].unique())
         proteins = sorted(set(self_proteins + interactor_proteins))
@@ -253,7 +304,7 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
             log.info(f"\nCURRENT PROTEIN: {protein}")
             if protein_to_gene_dict[protein] == "NA":
                 log.error(f"PROTEIN: {protein} IS `NA` IN SNV DATA.")
-                converted_gene = self.disruptive_interactions_per_patient.gene_retriever.fetch(protein)
+                converted_gene = self.inter_per_pat.gene_retriever.fetch(protein)
                 converted_legacy_gene = self.get_gene_id_from_uniprot_regex_v1(protein)
                 log.debug(f"converted_gene:         {converted_gene}")
                 log.debug(f"converted_legacy_gene:  {converted_legacy_gene}")
@@ -283,7 +334,7 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
             #     continue
 
             actual_gene = protein_to_gene_dict[protein]
-            converted_gene = self.disruptive_interactions_per_patient.gene_retriever.fetch(protein)
+            converted_gene = self.inter_per_pat.gene_retriever.fetch(protein)
             converted_legacy_gene = self.get_gene_id_from_uniprot_regex_v1(protein)
 
             log.debug(f"actual_gene:            {actual_gene}")
@@ -299,7 +350,7 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
                 self.assertEqual(converted_gene, converted_legacy_gene)
                 self.assertEqual(actual_gene, converted_gene)
             except AssertionError:
-                log.critical(f"EXCEPTIONAL PROTEIN: {protein}. ADDING TO LIST ..")
+                log.error(f"EXCEPTIONAL PROTEIN: {protein}. ADDING TO LIST ..")
                 brca_exception_proteins.append((protein, actual_gene, converted_gene))
 
         with open("brca_exceptions.txt", "w") as file:
@@ -345,5 +396,7 @@ class TestDisruptiveInteractionsPerPatient(TestCase):
             log.warning(f"status_code: {r.status_code}")
             time.sleep(1)
 
-        log.critical(f"COULD NOT RETRIEVE GENE: {attempt}")
+        log.error(f"COULD NOT RETRIEVE GENE: {attempt}")
         return np.nan
+
+# float('nan') # <- last remained here.
