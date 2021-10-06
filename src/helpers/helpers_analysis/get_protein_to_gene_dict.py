@@ -1,4 +1,4 @@
-from tqdm.notebook import tqdm
+from tqdm.auto import tqdm
 
 # TODO:
 # Istisna durumlar...
