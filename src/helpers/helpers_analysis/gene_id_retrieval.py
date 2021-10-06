@@ -92,7 +92,7 @@ class GeneIDRetriever:
             log.warning(f"status_code: {r.status_code}")
             time.sleep(5)
 
-        log.critical(f"COULD NOT RETRIEVE GENE FOR PROTEIN: {protein}")
+        log.error(f"COULD NOT RETRIEVE GENE FOR PROTEIN: {protein}")
         return "N/A"
 
     @staticmethod
