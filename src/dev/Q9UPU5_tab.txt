@@ -1,0 +1,2 @@
+Entry	Entry name	Status	Protein names	Gene names	Organism	Length
+Q9UPU5	UBP24_HUMAN	reviewed	Ubiquitin carboxyl-terminal hydrolase 24 (EC 3.4.19.12) (Deubiquitinating enzyme 24) (Ubiquitin thioesterase 24) (Ubiquitin-specific-processing protease 24)	USP24 KIAA1057	Homo sapiens (Human)	2620
