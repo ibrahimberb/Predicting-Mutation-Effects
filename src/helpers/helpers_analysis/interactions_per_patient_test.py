@@ -40,11 +40,13 @@ class TestInteractionsPerPatient(TestCase):
     BRCA_SNV_PATH = Path(os.path.join(SNV_COMMON_PATH, "SNV_BRCA_hg38.csv"))
     OV_SNV_PATH = Path(os.path.join(SNV_COMMON_PATH, "SNV_OV_hg38.csv"))
 
+    SNV_PATH = BRCA_SNV_PATH
+
     def setUp(self) -> None:
         self.inter_per_pat = InteractionsPerPatient(
-            tcga="brca",
-            prediction_data_path=self.PREDICTION_BRCA_REDUCED_PATH,
-            tcga_snv_path=self.BRCA_SNV_PATH,
+            tcga="ov",
+            prediction_data_path=self.PREDICTION_OV_REDUCED_PATH,
+            tcga_snv_path=self.OV_SNV_PATH,
             identifier="uniprot"
         )
 
@@ -109,13 +111,11 @@ class TestInteractionsPerPatient(TestCase):
         if self.inter_per_pat.tcga == "BRCA":
 
             if self.inter_per_pat.identifier == "uniprot":
-
                 self.assertNotEqual(
                     self.inter_per_pat.get_disruptive_interactors(
                         "Q01196", "G95R"
                     ), []
                 )
-
                 self.assertNotEqual(
                     self.inter_per_pat.get_disruptive_interactors(
                         "P00747", "D665H"
@@ -125,23 +125,42 @@ class TestInteractionsPerPatient(TestCase):
             elif self.inter_per_pat.identifier == "hugo":
                 pass
 
+        elif self.inter_per_pat.tcga == "OV":
+
+            if self.inter_per_pat.identifier == "uniprot":
+                self.assertNotEqual(
+                    self.inter_per_pat.get_disruptive_interactors(
+                        "O75175", "Q684H"
+                    ), []
+                )
+                self.assertNotEqual(
+                    self.inter_per_pat.get_disruptive_interactors(
+                        "Q14814", "K31T"
+                    ), []
+                )
+
         else:
             raise ValueError("TCGA falls outside test cases.")
 
-        # A fail case.
+        # a dummy fail case.
         self.assertEqual(
             self.inter_per_pat.get_disruptive_interactors(
                 "P123123", "MUT123"
             ), []
         )
 
-    # FIXME
+    # FIXME -- function name is not correct
     def test_patient_to_disruptive_interactions(self):
         patient_to_disruptive_interactions = self.inter_per_pat.patient_to_disruptive_interactions
 
         if self.inter_per_pat.tcga == "BRCA":
             self.assertEqual(
                 len(patient_to_disruptive_interactions), 985
+            )
+
+        elif self.inter_per_pat.tcga == "OV":
+            self.assertEqual(
+                len(patient_to_disruptive_interactions), 436
             )
 
         else:
