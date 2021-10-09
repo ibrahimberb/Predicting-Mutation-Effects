@@ -14,10 +14,8 @@ class Paths:
             self,
             project_common_file_dir,
             mutations_path,
-            tcga_code_path_pairs,
             initial_columns_path
     ):
         self.project_common_file_dir = project_common_file_dir
         self.mutations_path = mutations_path
-        self.tcga_code_path_pairs = tcga_code_path_pairs
         self.initial_columns_path = initial_columns_path

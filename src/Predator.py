@@ -61,7 +61,6 @@ class Predator:
             self,
             project_common_file_dir: Path,
             mutations_path: Path,
-            tcga_code_path_pairs: List[Tuple[TCGA_CODE, Path]],
             initial_columns_path: Path,
             n_experiment: int,
             eliminate_models=False
@@ -77,21 +76,15 @@ class Predator:
         self.paths = Paths(
             project_common_file_dir,
             mutations_path,
-            tcga_code_path_pairs,
             initial_columns_path,
         )
 
         self.tcga_cohorts = []
-        for tcga, _ in tcga_code_path_pairs:
-            self.tcga_cohorts.append(tcga)
 
         self.data_materials = DataMaterials(n_experiment, self.random_seeds)
 
         self.data_materials.initialize_train_dataset(
             project_common_file_dir, initial_columns_path, mutations_path
-        )
-        self.data_materials.initialize_target_datasets(
-            project_common_file_dir, initial_columns_path, tcga_code_path_pairs
         )
 
         self.default_models = DefaultModels(self.n_experiment)
@@ -241,9 +234,19 @@ class Predator:
         # Fill each model
         self.finalized_models.fit_all(self.data_materials, self.determined_feature_set)
 
-    def initialize_target_data_materials(self):
+    def initialize_target_data_materials(self, tcga_code_path_pairs: List[Tuple[TCGA_CODE, Path]]):
+
+        for tcga, _ in tcga_code_path_pairs:
+            self.tcga_cohorts.append(tcga)
+
+        self.data_materials.initialize_target_datasets(
+            self.paths.project_common_file_dir,
+            self.paths.initial_columns_path,
+            tcga_code_path_pairs
+        )
+
         self.data_materials.initialize_target_data_materials(
-            self.determined_features, self.paths.tcga_code_path_pairs
+            self.determined_features, tcga_code_path_pairs
         )
 
     def predict(self, voting="hard"):
