@@ -87,7 +87,7 @@ class Predator:
 
         self.data_materials = DataMaterials(n_experiment, self.random_seeds)
 
-        self.data_materials.initialize_train_datasets(
+        self.data_materials.initialize_train_dataset(
             project_common_file_dir, initial_columns_path, mutations_path
         )
         self.data_materials.initialize_target_datasets(

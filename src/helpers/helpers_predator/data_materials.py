@@ -68,7 +68,7 @@ class DataMaterials(dict):
         self[f"Xs_ddG"] = []
         self[f"Xs_train_ddG"] = []
 
-    def initialize_train_datasets(self, project_common_file_dir, initial_columns_path, mutations_path):
+    def initialize_train_dataset(self, project_common_file_dir, initial_columns_path, mutations_path):
         log.debug("Initialize `train_data` ..")
         log.debug("Initialize `train_data_processed` ..")
         self["train_data"] = load_train_data(project_common_file_dir, mutations_path)
