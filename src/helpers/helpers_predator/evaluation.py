@@ -87,10 +87,13 @@ class EvaluationMetrics:
         self.n_repeats = n_repeats
         scoring_metrics_list = []
         for exp in tqdm(range(self.n_experiment)):
-            scoring_metrics = evaluate_metrics(self.Xs_benchmark_feature_names_to_dataframes_list[exp],
-                                               self.data_materials["ys_train"][exp],
-                                               n_repeats=n_repeats, n_jobs=n_jobs,
-                                               verbose=verbose)  # <-- repeat should be 10 in actual run.
+            scoring_metrics = evaluate_metrics(
+                self.Xs_benchmark_feature_names_to_dataframes_list[exp],
+                self.data_materials["ys_train"][exp],
+                n_repeats=n_repeats,
+                n_jobs=n_jobs,
+                verbose=verbose
+            )  # <-- repeat should be 10 (or 5) in actual run.
             scoring_metrics_list.append(scoring_metrics)
         self.scoring_metrics_list = scoring_metrics_list
         self.prepare_scoring_metrics_data()
