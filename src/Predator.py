@@ -231,6 +231,14 @@ class Predator:
             log.info(f"Using {len(self.tuned_models)} tuned models as finalized models.")
             self.finalized_models = FinalizedModels(self.tuned_models)
 
+        # Fill the config main
+        config_main = {
+            "eliminate_models": self.eliminate_models,
+            "n_experiment": self.n_experiment,
+            "n_models": self.n_models
+        }
+        self.config["main"] = config_main
+
         # Fill each model
         self.finalized_models.fit_all(self.data_materials, self.determined_feature_set)
 
@@ -287,14 +295,13 @@ class Predator:
         overwrite=False,
         file_extension='csv'
     ):
-        config_main = {
-            # TODO: add info about tcga data: (its path/name and dimensions)
-            "eliminate_models": self.eliminate_models,
-            "n_experiment": self.n_experiment,
-            "n_models": self.n_models
-        }
 
-        self.config["main"] = config_main
+        # Fill the config main
+        config_prediction = {
+            # TODO: add info about tcga data: (its path/name and dimensions)
+            "tcga_cohorts": self.tcga_cohorts,
+        }
+        self.config["prediction"] = config_prediction
 
         export_prediction_data(
             tcga=tcga,
