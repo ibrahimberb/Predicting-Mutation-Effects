@@ -114,7 +114,7 @@ class Predictions(dict):
 
     def plot_num_finalized_predictions(self, tcga):
         log.debug("Plotting number of finalized predictions per model.\n"
-                  "Note that following plot shows the unique (protein, mutation, interactor) "
+                  "Note that following plot shows the number of (protein, mutation, interactor) "
                   "triplets which had valid prediction.")
         finalized_prediction_counts_data = pd.DataFrame({
             "Num_Entries": [len(data) for data in self[f"{tcga}_finalized_prediction_dataframes"]],
