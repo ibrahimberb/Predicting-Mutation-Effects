@@ -26,7 +26,10 @@ from helpers.helpers_predator.fine_tuning import FineTuner
 
 from helpers.helpers_predator.predictions import predictions_object
 
-from helpers.helpers_predator.common import export_prediction_data
+from helpers.helpers_predator.common import (
+    export_prediction_data,
+    get_current_date_time,
+)
 
 from helpers.helpers_predator.models import (
     DefaultModels,
@@ -235,7 +238,8 @@ class Predator:
         config_main = {
             "eliminate_models": self.eliminate_models,
             "n_experiment": self.n_experiment,
-            "n_models": self.n_models
+            "n_models": self.n_models,
+            "preparation_completed": get_current_date_time()
         }
         self.config["main"] = config_main
 
