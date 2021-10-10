@@ -171,6 +171,11 @@ def export_config(config, config_path):
     log.info(f"Config is exported.")
 
 
+def get_current_date_time():
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    return current_time
+
+
 def compare_predator_objects(p1, p2):
     """
     Compares given Predator objects.
@@ -257,11 +262,14 @@ def compare_predator_objects(p1, p2):
                    p2.shap_feature_selector.n_features_to_aggregated_features
 
         elif k == "eval_metrics":
-            assert p1.eval_metrics.scoring_metrics_data_melted.equals(
-                p2.eval_metrics.scoring_metrics_data_melted)
-            assert p1.eval_metrics.scoring_metrics_data.equals(p2.eval_metrics.scoring_metrics_data)
-            assert len(p1.eval_metrics.Xs_benchmark_feature_names_to_dataframes_list) == len(
-                p2.eval_metrics.Xs_benchmark_feature_names_to_dataframes_list)
+            if not (p1.eval_metrics.scoring_metrics_data is None and p2.eval_metrics.scoring_metrics_data is None):
+                assert p1.eval_metrics.scoring_metrics_data.equals(
+                    p2.eval_metrics.scoring_metrics_data)
+                assert p1.eval_metrics.scoring_metrics_data_melted.equals(
+                    p2.eval_metrics.scoring_metrics_data_melted)
+
+            assert len(p1.eval_metrics.Xs_benchmark_feature_names_to_dataframes_list) == \
+                   len(p2.eval_metrics.Xs_benchmark_feature_names_to_dataframes_list)
             for ix, _ in enumerate(p1.eval_metrics.Xs_benchmark_feature_names_to_dataframes_list):
                 assert p1.eval_metrics.Xs_benchmark_feature_names_to_dataframes_list[ix].keys() == \
                        p2.eval_metrics.Xs_benchmark_feature_names_to_dataframes_list[ix].keys()
