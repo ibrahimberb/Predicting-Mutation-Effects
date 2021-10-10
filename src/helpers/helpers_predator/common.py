@@ -61,12 +61,11 @@ def get_random_id(path):
         is_valid = not op.isdir(id_path)
 
         if is_valid:
-            # Path(path).mkdir(parents=True)
-            log.debug(f"Results folder with ID {random_id} is created.")
+            log.debug(f"Folder with ID {random_id} is created.")
             return random_id
 
 
-def export_serialized_predator(predator, overwrite=False) -> None:
+def export_serialized_predator(predator, folder_path="PredatorModels") -> None:
     """
     Serialize the `predator` object and export it as PKL file.
 
@@ -74,6 +73,9 @@ def export_serialized_predator(predator, overwrite=False) -> None:
     ----------
         predator : <Predator>
             The predator object to be serialized and exported.
+
+        folder_path : <PredatorModels>
+            The folder in which predator models are located at.
 
     Returns
     -------
@@ -84,10 +86,18 @@ def export_serialized_predator(predator, overwrite=False) -> None:
     #  folder will be containing production ready pickle object and its metadata.
 
     current_date = datetime.today().strftime('%Y-%m-%d')
-    filename = f"predator_{current_date}.pkl"
+
+    random_id = get_random_id(folder_path)
+    folder_name = op.join(f"PredatorModel_{current_date}", random_id)
+    log.debug(f"Exporting Predator at location {folder_path} in folder {folder_name}..")
+
+    folder_path = op.join(folder_path, folder_name)
+    Path(f"{folder_path}").mkdir(parents=True, exist_ok=True)
+
+    filename = op.join(folder_path, "predator.pkl")
 
     # Ensure the file is not exists before creating to prevent overwriting.
-    if op.isfile(filename) and not overwrite:
+    if op.isfile(filename):
         log.error(f"File {filename} is already exist.\n"
                   "To overwrite existing file, use `overwrite=True`.")
 
@@ -95,6 +105,10 @@ def export_serialized_predator(predator, overwrite=False) -> None:
         pickle.dump(predator, fid)
 
     log.info(f"Predator object {filename} is exported.")
+
+    # Export metadata
+    config_path = op.join(folder_path, "config.txt")
+    export_config(predator.config, config_path)
 
 
 def load_predator(predator_obj_name):
@@ -143,15 +157,18 @@ def export_prediction_data(
 
         # Export metadata
         config_path = op.join(folder_path, "config.txt")
-        with open(config_path, "w") as file:
-            for config_name, config_dict in config.items():
-                file.write(f"{config_name.upper()}\n")
-                for key, values in config_dict.items():
-                    file.write(
-                        f"    {key.upper()}: {config[f'{config_name}'][f'{key}']}\n"
-                    )
+        export_config(config, config_path)
 
-        log.debug(f"Config is exported.")
+
+def export_config(config, config_path):
+    with open(config_path, "w") as file:
+        for config_name, config_dict in config.items():
+            file.write(f"{config_name.upper()}\n")
+            for key, values in config_dict.items():
+                file.write(
+                    f"    {key.upper()}: {config[f'{config_name}'][f'{key}']}\n"
+                )
+    log.info(f"Config is exported.")
 
 
 def compare_predator_objects(p1, p2):
