@@ -248,6 +248,7 @@ class Predator:
 
     def initialize_target_data_materials(self, tcga_code_path_pairs: List[Tuple[TCGA_CODE, Path]]):
 
+        self.tcga_cohorts = []
         for tcga, _ in tcga_code_path_pairs:
             self.tcga_cohorts.append(tcga)
 
