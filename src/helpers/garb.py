@@ -17,14 +17,11 @@
 #     response = f.read()
 # print(response.decode('utf-8'))
 
-import re
-
-pattern = re.compile(r"^([A-Z])([A-Z])(\d+)([A-Z])$")
-
-s = "LI45G"
-
-print(pattern.match(s).groups())
-original_aa, chain_identifier, residue_number, mutant_aa = pattern.match(s).groups()
-
-
-
+# import re
+#
+# pattern = re.compile(r"^([A-Z])([A-Z])(\d+)([A-Z])$")
+#
+# s = "LI45G"
+#
+# print(pattern.match(s).groups())
+# original_aa, chain_identifier, residue_number, mutant_aa = pattern.match(s).groups()
