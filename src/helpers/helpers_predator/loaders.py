@@ -24,7 +24,6 @@ def load_train_data(project_common_file_dir, mutations_path):
 def load_tcga_data(project_common_file_dir, tcga_path):
     """
     Loads the TCGA cancer dataset.
-    :param project_common_file_dir:
     :param tcga_path:
     :return:
     """
@@ -32,6 +31,3 @@ def load_tcga_data(project_common_file_dir, tcga_path):
     log.debug(f"Size of dataframe: {tcga_data.shape}")
     log.debug('Dataframe head: {}'.format(tcga_data.head()))
     return tcga_data
-
-
-# print(__name__)

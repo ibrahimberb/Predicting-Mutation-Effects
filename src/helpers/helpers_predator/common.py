@@ -22,7 +22,7 @@ def print_annotation(s):
 
 
 def get_file_path(project_common_file_dir, filename):
-    return op.join(project_common_file_dir, filename)
+    return op.join(Path(project_common_file_dir), Path(filename))
 
 
 def export_data(
@@ -66,7 +66,7 @@ def get_random_id(path):
             return random_id
 
 
-def export_serialized_predator(predator) -> None:
+def export_serialized_predator(predator, overwrite=False) -> None:
     """
     Serialize the `predator` object and export it as PKL file.
 
@@ -85,8 +85,11 @@ def export_serialized_predator(predator) -> None:
 
     current_date = datetime.today().strftime('%Y-%m-%d')
     filename = f"predator_{current_date}.pkl"
-    if op.isfile(filename):
-        raise FileExistsError(f"You already have file {filename}.")
+
+    # Ensure the file is not exists before creating to prevent overwriting.
+    if op.isfile(filename) and not overwrite:
+        log.error(f"File {filename} is already exist.\n"
+                  "To overwrite existing file, use `overwrite=True`.")
 
     with open(filename, 'wb') as fid:
         pickle.dump(predator, fid)
