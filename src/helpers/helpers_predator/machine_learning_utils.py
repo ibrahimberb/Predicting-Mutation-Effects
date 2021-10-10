@@ -7,7 +7,7 @@ from sklearn.model_selection import cross_val_predict
 from sklearn.model_selection import KFold
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import LeaveOneOut
-from sklearn.model_selection import RepeatedStratifiedKFold
+# from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.metrics import confusion_matrix
@@ -26,11 +26,9 @@ def get_default_classifier(random_state=None) -> RandomForestClassifier:
     return RandomForestClassifier(random_state=random_state)
 
 
-# Fixme : a function should do one thing, and one thing only.
-#  n_job is not necessary here, n_job can be supplied easily without needing a function.
-def cross_validation_options(cv_option, n_jobs=-1):
+def get_cross_validation_option(cv_option):
     """
-    A helper function that returns (my) desired cv_option and n_jobs.
+    A helper function that returns desired cv_option.
 
     Returns
     -------
@@ -56,24 +54,25 @@ def cross_validation_options(cv_option, n_jobs=-1):
     else:
         raise ValueError("cv_option value error!")
 
-    return cv_option, n_jobs
+    return cv_option
 
 
-def evaluate_cross_val(X_train, y_train, cv_option) -> None:
+def evaluate_cross_val(X_train, y_train, cv_option, n_jobs=-1) -> None:
     """
 
     :param X_train:
     :param y_train:
     :param cv_option:
+    :param n_jobs:
     :return:
     """
     # Cross Validation options
-    cv_option, n_jobs = cross_validation_options(cv_option, -1)
+    cv_option = get_cross_validation_option(cv_option)
 
     # Model
     classifier = get_default_classifier(random_state=42)
 
-    # Cross-validation Accuracy and Balanced Accuracy Scores
+    # Cross-validation Balanced Accuracy Scores
     balan_acc_scores = cross_val_score(
         classifier,
         X_train,
@@ -83,6 +82,7 @@ def evaluate_cross_val(X_train, y_train, cv_option) -> None:
         n_jobs=n_jobs,
     )
 
+    # Cross-validation Accuracy Scores
     acc_scores = cross_val_score(
         classifier, X_train, y_train, cv=cv_option, scoring="accuracy", n_jobs=n_jobs
     )
