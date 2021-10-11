@@ -1,0 +1,4 @@
+Method,default,default_brca,baseline_nonzero,baseline_nonzero_brca
+BASELINE,0.597,0.712,0.635,0.678
+OURS,0.564,0.630,0.572,0.569
+ELASPIC_COV,0.565,0.718,0.615,0.758
