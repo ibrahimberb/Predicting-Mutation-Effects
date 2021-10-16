@@ -12,8 +12,6 @@ log.setLevel(logging.DEBUG)
 
 def process_snv(data) -> DataFrame:
     """
-    April 8th, 2021
-
     Given a SNV dataframe, do the following processes and return it.
 
         1) Filter for `Variant_Classification`:
@@ -22,7 +20,10 @@ def process_snv(data) -> DataFrame:
         2) Filter for `SWISSPROT` column:
             Drop nan (empty) values.
 
-        3) Processing `HGVSp_Short` column:
+        3) Filter for `SWISSPROT` column:
+            Drop nan (empty) values.
+
+        4) Processing `HGVSp_Short` column:
             For mutation, exclude 'p' in the beginning of string.
 
     Parameters
@@ -43,7 +44,10 @@ def process_snv(data) -> DataFrame:
     # 2) Filter for 'SWISSPROT' column and drop nan (empty) values.
     data = data.dropna(subset=["SWISSPROT"])
 
-    # 3) Processing `HGVSp_Short` column, removing preceeding 'p.'.
+    # 3) Filter for 'HGVSp_Short' column and drop nan (empty) values.
+    data = data.dropna(subset=["HGVSp_Short"])
+
+    # 4) Processing `HGVSp_Short` column, removing preceeding 'p.'.
     data["HGVSp_Short"] = data["HGVSp_Short"].apply(lambda x: str(x).replace('p.', ''))
 
     # Reset index of the dataframe to avoid any possible errors
