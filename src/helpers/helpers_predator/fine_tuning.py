@@ -5,6 +5,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import RepeatedStratifiedKFold
 
 import pandas as pd
+import numpy as np
 
 from .machine_learning_utils import get_default_classifier
 
@@ -31,9 +32,19 @@ log.setLevel(logging.DEBUG)
 
 class FineTuner:
 
-    PARAM_GRID_SIMPLE = {
+    PARAM_GRID_LEVEL_0 = {
         'max_depth': [2, 5, 10],
         'n_estimators': [10, 25, 50, 75, 100, 200, 400],
+        'min_samples_split': [2, 5],
+        'max_features': ['auto', 'sqrt', None],
+        'class_weight': ['balanced', None]
+    }
+
+    PARAM_GRID_LEVEL_1 = {
+        'bootstrap': [True, False],
+        'max_depth': list(np.arange(2, 15)) + [None],
+        'min_samples_leaf': [1, 2, 4],
+        'n_estimators': [5] + list(np.arange(10, 110, 10)) + list(np.arange(120, 620, 20)),
         'min_samples_split': [2, 5],
         'max_features': ['auto', 'sqrt', None],
         'class_weight': ['balanced', None]
@@ -68,44 +79,51 @@ class FineTuner:
 
     def get_param_grid(self, level):
         if level == 0:
-            return self.PARAM_GRID_SIMPLE
+            return self.PARAM_GRID_LEVEL_0
 
-        # elif level == 1:
-        #     return self.PARAM_GRID_1
+        elif level == 1:
+            return self.PARAM_GRID_LEVEL_1
 
-    def run_randomized_search(self) -> None:
-        log.debug("Running randomized search for each experiment ..")
-        randomized_search_objects = []
-        for exp in tqdm(range(self.n_experiment)):
-            random_seed = self.random_seeds[exp]
-            randomized_search = self.get_randomized_search(random_seed)
-            X_fine_tuning = self.data_materials[self.Xs_determined][exp]
-            y_fine_tuning = self.data_materials["ys_train"][exp]
-            randomized_search.fit(X_fine_tuning, y_fine_tuning)
-            randomized_search_objects.append(randomized_search)
-        self.randomized_search_objects = randomized_search_objects
-        self.save_randomized_search_info()
-        self.save_best_estimators()
+        else:
+            raise ValueError(f"Level {level} is invalid argument.")
+
+    # def run_randomized_search(self) -> None:
+    #     log.debug("Running randomized search for each experiment ..")
+    #     randomized_search_objects = []
+    #     for exp in tqdm(range(self.n_experiment)):
+    #         random_seed = self.random_seeds[exp]
+    #         X_fine_tuning = self.data_materials[self.Xs_determined][exp]
+    #         y_fine_tuning = self.data_materials["ys_train"][exp]
+    #         randomized_search = self.get_randomized_search(random_seed)
+    #         randomized_search.fit(X_fine_tuning, y_fine_tuning)
+    #         randomized_search_objects.append(randomized_search)
+    #     self.randomized_search_objects = randomized_search_objects
+    #     self.save_randomized_search_info()
+    #     self.save_best_estimators()
 
     def run_search(self, search_type="randomized") -> None:
         log.debug(f"Running {search_type} search for each experiment ..")
         log.debug(f"PARAM_GRID: {self.param_grid}")
         search_objects = []
-        if search_type == "randomized":
-            searcher = self.get_randomized_search
-        else:
-            searcher = self.get_grid_search
         # searcher = self.get_randomized_search if search_type == "randomized" else self.get_grid_search
         for exp in tqdm(range(self.n_experiment)):
             random_seed = self.random_seeds[exp]
             X_fine_tuning = self.data_materials[self.Xs_determined][exp]
             y_fine_tuning = self.data_materials["ys_train"][exp]
-            randomized_search = searcher(random_seed)
-            randomized_search.fit(X_fine_tuning, y_fine_tuning)
-            search_objects.append(randomized_search)
+            search_obj = self.get_searcher(search_type, random_seed)
+            search_obj.fit(X_fine_tuning, y_fine_tuning)
+            search_objects.append(search_obj)
         self.randomized_search_objects = search_objects
         self.save_randomized_search_info()
         self.save_best_estimators()
+
+    def get_searcher(self, search_type, random_seed):
+        if search_type == "randomized":
+            return self.get_randomized_search(random_seed)
+        elif search_type == "grid":
+            return self.get_grid_search(random_seed)
+        else:
+            raise ValueError(f"{search_type} is invalid argument.")
 
     def get_randomized_search(self, random_seed) -> RandomizedSearchCV:
 
@@ -127,6 +145,9 @@ class FineTuner:
         return randomized_search
 
     def get_grid_search(self, random_seed) -> GridSearchCV:
+
+        if self.n_iter is not None:
+            log.warning("Using GRID SEARCH. Parameter `n_iter` will be ignored.")
 
         clf = get_default_classifier(random_state=random_seed)
 
