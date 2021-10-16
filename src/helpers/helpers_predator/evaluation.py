@@ -3,6 +3,10 @@
 
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.model_selection import cross_val_score
+
+from sklearn.metrics import matthews_corrcoef
+from sklearn.metrics import make_scorer
+
 import pandas as pd
 import numpy as np
 from tqdm.notebook import tqdm
@@ -31,19 +35,25 @@ log_simple.handlers[:] = []
 log_simple.addHandler(handler_simple)
 log_simple.setLevel(logging.DEBUG)
 
-EVAL_METRICS = [
-    "f1",
-    "balanced_accuracy",
-    "accuracy",
-    "f1_macro",
-    "f1_micro",
-    "precision",
-    "recall",
-    "roc_auc",
-    "precision_macro",
-    "precision_micro"
+mcc = make_scorer(matthews_corrcoef)
 
-]
+EVAL_METRICS_DICT = {
+    "F1": "f1",
+    "BALANCED_ACCURACY": "balanced_accuracy",
+    "ACCURACY": "accuracy",
+    "F1_MACRO": "f1_macro",
+    "F1_MICRO": "f1_micro",
+    "PRECISION": "precision",
+    "RECALL": "recall",
+    "ROC_AUC": "roc_auc",
+    "PRECISION_MACRO": "precision_macro",
+    "PRECISION_MICRO": "precision_micro",
+    # Custom metrics
+    "MCC": mcc,
+}
+
+# An option is to use `cross_validate` function. It takes multiple scoring metrics.
+# https://stackoverflow.com/questions/35876508/evaluate-multiple-scores-on-sklearn-cross-val-score/43978914
 
 
 class EvaluationMetrics:
@@ -343,6 +353,7 @@ def cross_val_score_feature_comparison(X, y, scoring, n_repeats, n_jobs):
     # In calculation of scores, cross-validation is repeated n times, which yields a total of 10*n folds.
     # E.g. if n=10, it means cross-validation is repeated 10 times with a total of 100 folds.
     clf = get_default_classifier(random_state=42)
+    # Std of each scores can be added: scores.mean() → scores.std()
     return (round(cross_val_score(clf, X, y,
                                   cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=n_repeats),
                                   scoring=scoring, n_jobs=n_jobs).mean(), 4))
@@ -359,15 +370,15 @@ def evaluate_metric(X_benchmark_feature_names_dataframes: dict, y, metric, n_rep
     return scores_comparison
 
 
-def evaluate_metrics(X_benchmark_feature_names_dataframes, y, n_repeats, n_jobs, verbose, eval_metrics=None):
-    if eval_metrics is None:
-        eval_metrics = EVAL_METRICS
+def evaluate_metrics(X_benchmark_feature_names_dataframes, y, n_repeats, n_jobs, verbose, eval_metrics_dict=None):
+    if eval_metrics_dict is None:
+        eval_metrics_dict = EVAL_METRICS_DICT
 
     scoring_metrics = {}
 
-    for metric in eval_metrics:
+    for metric_name, metric in eval_metrics_dict.items():
         if verbose:
-            print(F"\nEVALUATION METRIC: {metric.upper()}")
+            print(F"\nEVALUATION METRIC: {metric_name}")
             print("------------------------------------")
         scores_comparison = evaluate_metric(X_benchmark_feature_names_dataframes, y, metric=metric,
                                             n_repeats=n_repeats,
