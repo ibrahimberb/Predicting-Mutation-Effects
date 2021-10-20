@@ -127,6 +127,9 @@ class FineTuner:
 
     def get_randomized_search(self, random_seed) -> RandomizedSearchCV:
 
+        if self.n_iter is None:
+            raise ValueError("Using RANDOMIZED SEARCH. Parameter `n_iter` cannot be None.")
+
         clf = get_default_classifier(random_state=random_seed)
 
         randomized_search = RandomizedSearchCV(
