@@ -140,11 +140,11 @@ class EvaluationMetrics:
             )
         self.scoring_metrics_data = pd.concat(dataframes, axis='columns')
 
-    def plot_performance_comparison_results(self):
+    def plot_performance_comparison_results(self, metrics=None):
         # sns.set_theme(style="ticks", palette="pastel", font_scale=1.5)  # TODO: POSTER,uncommendLATER
         sns.set_theme(style="ticks", palette="pastel", font_scale=1.65)
         # TODO: [later] plot size adjusting itself depending on input ↓
-        plt.figure(figsize=(20 + len(self.benchmark_columns), 7))
+        plt.figure(figsize=(30 + len(self.benchmark_columns), 7))
         # title_string_1 = fr"Performance\ Comparison\ of\ Selected\ Features\ vs.\ All\ Features"
         # title_string_2 = fr"CV = 10, CV\_repeat = {self.n_repeats}, Experiment\_repeat = {self.n_experiment}"
         title_string_1 = fr"Performance\ Comparison\ of\ Selected\ Features"
@@ -155,16 +155,19 @@ class EvaluationMetrics:
         plt.axhline(y=0.5, color='k', linestyle='--', alpha=0.8, lw=0.5)
         # noinspection SpellCheckingInspection
 
-        scoring_metrics_data_melted_less_metrics = self.scoring_metrics_data_melted[
-            self.scoring_metrics_data_melted['METRIC'].isin(
-                ['accuracy', 'balanced_accuracy', 'f1', 'precision', 'recall',
-                 'roc_auc']
-            )]
+        if metrics is not None:
+            scoring_metrics_data_melted_less_metrics = self.scoring_metrics_data_melted[
+                self.scoring_metrics_data_melted['METRIC'].isin(metrics)
+            ]
+            scoring_metrics_data_plot = scoring_metrics_data_melted_less_metrics
+
+        else:
+            scoring_metrics_data_plot = self.scoring_metrics_data_melted
 
         # ax = sns.boxplot(x='METRIC', y='SCORE', hue='FEATURES', data=scoring_metrics_data_melted_less_metrics,
         #                  palette='Pastel1')  # bone, vlag, cividis, #03012d, light:#444452
 
-        ax = sns.boxplot(x='METRIC', y='SCORE', hue='FEATURES', data=self.scoring_metrics_data_melted,
+        ax = sns.boxplot(x='METRIC', y='SCORE', hue='FEATURES', data=scoring_metrics_data_plot,
                          palette='Pastel1')  # bone, vlag, cividis, #03012d, light:#444452
         ax.xaxis.set_minor_locator(MultipleLocator(0.5))
         ax.xaxis.grid(True, which='minor', color='#ababab', lw=1)
@@ -383,7 +386,7 @@ def evaluate_metrics(X_benchmark_feature_names_dataframes, y, n_repeats, n_jobs,
         scores_comparison = evaluate_metric(X_benchmark_feature_names_dataframes, y, metric=metric,
                                             n_repeats=n_repeats,
                                             n_jobs=n_jobs, verbose=verbose)
-        scoring_metrics[metric] = scores_comparison
+        scoring_metrics[metric_name] = scores_comparison  # <- WSA
         if verbose:
             print("====================================")
 
