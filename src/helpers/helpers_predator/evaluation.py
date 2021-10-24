@@ -144,8 +144,11 @@ class EvaluationMetrics:
         # sns.set_theme(style="ticks", palette="pastel", font_scale=1.5)  # TODO: POSTER,uncommendLATER
         sns.set_theme(style="ticks", palette="pastel", font_scale=1.65)
         # TODO: [later] plot size adjusting itself depending on input ↓
-        plt.figure(figsize=(30 + len(self.benchmark_columns), 7))
-        # title_string_1 = fr"Performance\ Comparison\ of\ Selected\ Features\ vs.\ All\ Features"
+        if metrics is None:
+            plt.figure(figsize=(30 + len(self.benchmark_columns), 7))
+        else:
+            plt.figure(figsize=(3 * len(metrics), 7))
+# title_string_1 = fr"Performance\ Comparison\ of\ Selected\ Features\ vs.\ All\ Features"
         # title_string_2 = fr"CV = 10, CV\_repeat = {self.n_repeats}, Experiment\_repeat = {self.n_experiment}"
         title_string_1 = fr"Performance\ Comparison\ of\ Selected\ Features"
         title_string_2 = ""
