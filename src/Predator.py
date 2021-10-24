@@ -66,15 +66,18 @@ class Predator:
             mutations_path: Path,
             initial_columns_path: Path,
             n_experiment: int,
-            eliminate_models=False
+            eliminate_models=False,
+            random_seeds=None,
     ):
 
         log.debug('Initializing Predator ..')
         self.n_experiment = n_experiment
         self.n_models = self.n_experiment
-        self.random_seeds = list(
-            range(1, self.n_experiment + 1)
-        )  # todo: this will be a random array, too.
+
+        if random_seeds is None:
+            self.random_seeds = list(range(1, self.n_experiment + 1))
+        else:
+            self.random_seeds = random_seeds
 
         self.paths = Paths(
             project_common_file_dir,
