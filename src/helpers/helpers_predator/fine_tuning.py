@@ -134,7 +134,7 @@ class FineTuner:
 
         randomized_search = RandomizedSearchCV(
             clf, self.param_grid,
-            n_iter=self.n_iter,  # TODO, change n_iter to 10, (or some other num.)
+            n_iter=self.n_iter,
             random_state=random_seed,
             cv=RepeatedStratifiedKFold(
                 n_splits=10, n_repeats=self.n_repeats_cv, random_state=random_seed
