@@ -345,7 +345,7 @@ class EvaluationValid:
         # plt.axhline(y=0.7424242424242424, color='b', linestyle='--')
         # plt.axhline(y=0.6920995670995671, color='b', linestyle='--')
 
-        plt.axhline(y=0.617560, color='r', linestyle='--')
+        plt.axhline(y=balanced_acc_threshold, color='r', linestyle='--')
 
         df_concated = pd.concat(
             [default_data, feature_selected_data, tuned_data, tuned_qualified_data]
