@@ -45,8 +45,6 @@ log.addHandler(handler)
 log.setLevel(logging.DEBUG)
 
 
-# TODO move on to the protein representation implementation
-#  in disruptive interactions per patient.
 class InteractionsPerPatient:
     def __init__(
             self,
@@ -114,7 +112,7 @@ class InteractionsPerPatient:
         self.load_disruptive_prediction_data()
         self.load_uniprot_to_gene_id()
         log.info("Materials loaded.")
-        log.info(f"Number of {self.tcga} patients: {self.patient_to_disruptive_interactions}.")
+        log.info(f"Number of {self.tcga} patients: {len(self.patients)}.")
 
     def load_snv_data_simplified(self):
         log.debug("Loading SNV data simplified ..")
