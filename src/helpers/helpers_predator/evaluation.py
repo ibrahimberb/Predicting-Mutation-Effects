@@ -103,7 +103,7 @@ class EvaluationMetrics:
                 n_repeats=n_repeats,
                 n_jobs=n_jobs,
                 verbose=verbose
-            )  # <-- repeat should be 10 (or 5) in actual run.
+            )
             scoring_metrics_list.append(scoring_metrics)
         self.scoring_metrics_list = scoring_metrics_list
         self.prepare_scoring_metrics_data()
@@ -389,7 +389,7 @@ def evaluate_metrics(X_benchmark_feature_names_dataframes, y, n_repeats, n_jobs,
         scores_comparison = evaluate_metric(X_benchmark_feature_names_dataframes, y, metric=metric,
                                             n_repeats=n_repeats,
                                             n_jobs=n_jobs, verbose=verbose)
-        scoring_metrics[metric_name] = scores_comparison  # <- WSA
+        scoring_metrics[metric_name] = scores_comparison
         if verbose:
             print("====================================")
 
