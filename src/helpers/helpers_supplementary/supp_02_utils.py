@@ -131,6 +131,7 @@ class Supp02Helper:
         # ELASPIC CORE PROCESSED ENTRIES AND MUTATIONS
         temp_df = self.elaspic_data_materials[f"{self.tcga}_elaspic_core_data_simplified"]
         num_elaspic_core_processed_entries = len(temp_df)
+        # most likely as the same as `num_elaspic_core_mutations`.
         num_elaspic_core_processed_mutations = len(
             temp_df[~temp_df.duplicated(subset=["UniProt_ID", "Mutation"])]
         )
@@ -142,9 +143,10 @@ class Supp02Helper:
             temp_df[~temp_df.duplicated(subset=["UniProt_ID", "Mutation"])]
         )
 
-        # ELASPIC INTERFACE PROCESSED ENTRIES AND MUTATIONS
+        # ELASPIC INTERFACE PROCESSED TRIPLETS (also entries) AND MUTATIONS
         temp_df = self.elaspic_data_materials[f"{self.tcga}_elaspic_interface_processed_data"]
-        num_elaspic_interface_processed_entries = len(temp_df)
+        num_elaspic_interface_processed_triplets = len(temp_df)
+        # most likely as the same as `num_elaspic_interface_mutations`.
         num_elaspic_interface_processed_mutations = len(
             temp_df[~temp_df.duplicated(subset=["UniProt_ID", "Mutation"])]
         )
@@ -173,7 +175,7 @@ class Supp02Helper:
             "num_elaspic_interface_entries": num_elaspic_interface_entries,
             "num_elaspic_interface_mutations": num_elaspic_interface_mutations,
 
-            "num_elaspic_interface_processed_entries": num_elaspic_interface_processed_entries,
+            "num_elaspic_interface_processed_triplets": num_elaspic_interface_processed_triplets,
             "num_elaspic_interface_processed_mutations": num_elaspic_interface_processed_mutations,
 
             "num_elaspic_core_processed_and_interface_processed_entries":
