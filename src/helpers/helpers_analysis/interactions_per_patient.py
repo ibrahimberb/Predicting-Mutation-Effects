@@ -342,9 +342,9 @@ class InteractionsPerPatient:
         patient_to_seen_protein_mutation_pairs = defaultdict(list)
 
         for patient in tqdm(self.patients):
-            patient_disruptive_interactions = self.patient_to_disruptive_interactions[patient]
+            patient_interactions = self.patient_to_interactions[patient]
 
-            for protein, mutation, _ in patient_disruptive_interactions:
+            for protein, mutation, _ in patient_interactions:
                 """
                 # unnecessary duplication: but DOES NOT work fine.
                 TCGA-A8-A093	P28062	R216W	['P40306']
