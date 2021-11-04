@@ -1,0 +1,4 @@
+Method,default,default_esca,baseline_nonzero,baseline_nonzero_esca
+BASELINE,0.574,0.452,0.552,nan
+OURS,0.557,0.474,0.602,nan
+ELASPIC_COV,0.568,0.695,0.650,nan
