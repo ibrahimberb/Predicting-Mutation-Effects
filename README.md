@@ -1,7 +1,1 @@
-# Predicting Mutation-Effects
-
-Predator
-
-PredatorAnalysis
-
-DataPreparer (?)
+# PREDATOR: Predicting the impact of cancer somatic mutations on protein-protein interactions
