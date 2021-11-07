@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 
 from .interactions_per_patient import InteractionsPerPatient
 
-from ..helpers_analysis.get_protein_to_gene_dict import get_protein_to_gene_dict
+from ..helpers_analysis.get_protein_to_gene_dict import get_protein_to_gene_dict_via_snv
 
 from ..mylogger import get_handler
 import logging
@@ -316,7 +316,7 @@ class TestInteractionsPerPatient(TestCase):
         log.debug(f"len interactor_proteins: {len(interactor_proteins)}")
         log.debug(f"len proteins: {len(proteins)}")
 
-        protein_to_gene_dict = get_protein_to_gene_dict(proteins, snv_data)
+        protein_to_gene_dict = get_protein_to_gene_dict_via_snv(proteins, snv_data)
         brca_exception_proteins = []
 
         for protein in tqdm(proteins):
