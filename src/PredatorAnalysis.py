@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Tuple, List
+from typing import List
 # from IPython.display import display
 
 import pandas as pd
@@ -140,8 +140,7 @@ class PredatorAnalysis:
 
         # Genes
         protein_to_gene_dict = get_protein_to_gene_dict(
-            self.data_materials[f"{self.tcga}_elaspic_proteins"],
-            self.data_materials[f"{self.tcga}_snv_data_simplified"]
+            self.data_materials[f"{self.tcga}_elaspic_proteins"]
         )
         self.data_materials[f"{self.tcga}_protein_to_gene_dict"] = protein_to_gene_dict
         log.debug(f"{self.tcga}_protein_to_gene_dict loaded.")
