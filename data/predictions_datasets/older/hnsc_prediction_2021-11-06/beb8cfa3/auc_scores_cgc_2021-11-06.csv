@@ -1,0 +1,4 @@
+Method,default,default_hnsc,baseline_nonzero,baseline_nonzero_hnsc
+BASELINE,0.599,0.667,0.608,0.867
+OURS,0.572,0.610,0.585,0.671
+ELASPIC_COV,0.566,0.967,0.594,0.975
