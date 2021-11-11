@@ -1,6 +1,64 @@
-# with open (r"../../data/cgc_genes/all_genes.txt") as fin:
-#     lines = fin.readlines()
-#     lines = [line.strip() for line in lines]
-#
-# print(len(lines))
-# print(lines)
+patients = [
+    "TCGA-LD-A74U",
+    "TCGA-A7-A26F",
+    "TCGA-AR-A0U2",
+    "TCGA-A7-A6VW",
+    "TCGA-A7-A6VX",
+    "TCGA-B6-A0I1",
+    "TCGA-AR-A0TP",
+    "TCGA-C8-A134",
+    "TCGA-BH-A203",
+    "TCGA-A2-A0CL",
+    "TCGA-C8-A26W",
+    "TCGA-AR-A24T",
+    "TCGA-D8-A147",
+    "TCGA-AR-A1AJ",
+    "TCGA-A2-A0T1",
+    "TCGA-E2-A574",
+    "TCGA-E2-A1B1",
+    "TCGA-BH-A5IZ",
+    "TCGA-C8-A12P",
+    "TCGA-OL-A5RY",
+    "TCGA-A2-A04T",
+    "TCGA-LL-A8F5",
+    "TCGA-AR-A2LH",
+    "TCGA-A8-A09X",
+    "TCGA-D8-A1JF",
+    "TCGA-BH-A0WA",
+    "TCGA-AN-A0FX",
+    "TCGA-A2-A4S1",
+    "TCGA-UU-A93S",
+    "TCGA-BH-A1FE",
+    "TCGA-AR-A1AW",
+    "TCGA-D8-A1JM",
+    "TCGA-EW-A1P4",
+    "TCGA-LL-A6FR",
+    "TCGA-B6-A0RS",
+    "TCGA-A8-A08X",
+    "TCGA-AN-A04C",
+    "TCGA-PL-A8LV",
+    "TCGA-C8-A1HF",
+    "TCGA-C8-A278",
+    "TCGA-EW-A1P1",
+    "TCGA-A2-A0SW",
+    "TCGA-D8-A1XL",
+    "TCGA-LL-A5YP",
+    "TCGA-BH-A1FN",
+    "TCGA-EW-A6S9",
+    "TCGA-C8-A12O",
+    "TCGA-BH-A0C3",
+    "TCGA-BH-A0EB",
+    "TCGA-E9-A1NC",
+    "TCGA-B6-A0WX",
+    "TCGA-BH-A0BC",
+    "TCGA-A8-A07W",
+    "TCGA-BH-A0AV",
+    "TCGA-OL-A5D6",
+    "TCGA-D8-A1XT",
+]
+
+print(len(patients))
+print(len(set(patients)))
+
+
+
