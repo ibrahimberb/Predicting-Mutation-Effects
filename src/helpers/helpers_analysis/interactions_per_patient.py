@@ -21,13 +21,12 @@
 # import requests
 from collections import defaultdict
 from datetime import datetime
+from typing import List
 
 from pandas import read_csv
 import pandas as pd
 from pathlib import Path
 import os.path as op
-
-from .loaders import load_snv_datasets
 
 from tqdm.auto import tqdm
 # import os.path as op
@@ -36,6 +35,16 @@ from ..mylogger import get_handler
 import logging
 
 from .gene_id_retrieval import GeneIDRetriever
+
+from .get_patient_protein_to_mutations_dict import get_patient_protein_to_mutations_dict
+
+from .loaders import (
+    load_snv_datasets,
+    load_elaspic_datasets
+)
+
+from .is_core import is_core
+from .is_in_elaspic import is_in_elaspic
 
 handler = get_handler()
 
@@ -51,6 +60,8 @@ class InteractionsPerPatient:
             tcga: str,
             prediction_data_path: Path,
             tcga_snv_path: Path,
+            elaspic_core_path: Path,
+            elaspic_interface_path: Path,
             identifier: str,
             verbose: bool = False
     ):
@@ -81,6 +92,8 @@ class InteractionsPerPatient:
         self.tcga = tcga.upper()
         self.prediction_data_path = prediction_data_path
         self.tcga_snv_path = tcga_snv_path
+        self.elaspic_core_path = elaspic_core_path
+        self.elaspic_interface_path = elaspic_interface_path
         self.identifier = identifier
         self.verbose = verbose
 
@@ -91,12 +104,18 @@ class InteractionsPerPatient:
         self.prediction_data = None
         self.analysis_table = None
 
+        self.core_data = None
+        self.interface_data = None
+
         self.patient_to_interactions = None
         self.patient_to_disruptive_interactions = None
+
+        self.patient_protein_to_C_I_status_data = None
 
         self.uniprot_to_gene_id = None
         self.gene_retriever = GeneIDRetriever()
         self.load_materials()
+        self.prepare_patient_protein_to_C_I_status_data(self.patients)
 
         self.find_all_interactions()
         self.find_disruptive_interactions()
@@ -111,8 +130,21 @@ class InteractionsPerPatient:
         self.load_prediction_data()
         self.load_disruptive_prediction_data()
         self.load_uniprot_to_gene_id()
+        self.load_elaspic_core_and_interface_datasets()
         log.info("Materials loaded.")
         log.info(f"Number of {self.tcga} patients: {len(self.patients)}.")
+
+    def load_elaspic_core_and_interface_datasets(self):
+        elaspic_data_materials = {}
+        load_elaspic_datasets(
+            tcga=self.tcga,
+            elaspic_core_path=self.elaspic_core_path,
+            elaspic_interface_path=self.elaspic_interface_path,
+            data_materials=elaspic_data_materials,
+        )
+
+        self.core_data = elaspic_data_materials[f"{self.tcga}_elaspic_core_data_simplified"]
+        self.interface_data = elaspic_data_materials[f"{self.tcga}_elaspic_interface_processed_data"]
 
     def load_snv_data_simplified(self):
         log.debug("Loading SNV data simplified ..")
@@ -177,20 +209,6 @@ class InteractionsPerPatient:
             ]["Interactor_UniProt_ID"].to_list()
 
         return interactors
-
-    # def find_disruptive_interactions_single_patient(self, patient):
-    #  # # # INCOMPLETE FUNCTION -- NOT NEEDED.
-    #     log.info(f"Finding disruptive interactions for patient: {patient} ..")
-    #     patient_snv_data = self.patient_to_snv_data[patient]
-    #     disruptive_interactions = []
-    #     for index, row in patient_snv_data.iterrows():
-    #         protein = row["SWISSPROT"]
-    #         mutation = row["HGVSp_Short"]
-    #         disruptive_predicted_interactions = self.get_disruptive_predicted_interactions(
-    #             protein, mutation
-    #         )
-    #         for interactor in disruptive_predicted_interactions:
-    #             print(f"{protein}, {mutation}, {interactor}")
 
     def find_all_interactions(self):
         log.info("Finding all interactions (disruptive and non-disruptive) for each patient ..")
@@ -285,56 +303,82 @@ class InteractionsPerPatient:
 
         log.info("`uniprot_to_gene_id` loaded. ")
 
-    # def load_uniprot_to_gene_id(self):
-    #     log.info("Loading UniProt ID to Gene ID ..")
-    #     uniprot_to_gene_id = {}
-    #
-    #     prediction_data = self.prediction_data.copy()
-    #     self_proteins = list(prediction_data["UniProt_ID"].unique())
-    #     interactor_proteins = list(prediction_data["Interactor_UniProt_ID"].unique())
-    #     proteins = sorted(set(self_proteins + interactor_proteins))
-    #
-    #     for protein in tqdm(proteins, desc="Retrieving Gene IDs from UniProt API .. "):
-    #         gene = self.get_gene_id_from_uniprot(protein)
-    #         uniprot_to_gene_id[protein] = gene
-    #
-    #     self.uniprot_to_gene_id = uniprot_to_gene_id
-    #
-    #     log.info("`uniprot_to_gene_id` loaded. ")
+    def is_protein_and_its_mutations_interface_only(
+            self,
+            protein: str,
+            mutations: List[str],
+    ):
+        protein_interface_only_flag = False
+        for mutation in mutations:
+            if is_in_elaspic(protein, mutation, self.core_data, self.interface_data):
+                if is_core(protein, mutation, self.core_data):
+                    return False
 
-    # def get_gene_id_from_uniprot(self, uniprot_id):
-    #     # log.debug("Retrieving sequence {} ...".format(uniprot_id))
-    #     address = "http://www.uniprot.org/uniprot/{}.fasta".format(uniprot_id)
-    #     n_attempt = 3
-    #     attempt = 0
-    #     while attempt < n_attempt:
-    #         r = requests.get(address)
-    #         if r.status_code == 200:
-    #             gene = self.get_gene_from_fasta(r.text)
-    #             return gene
-    #
-    #         attempt += 1
-    #         log.warning(f"attempt: {attempt}")
-    #         log.warning(f"status_code: {r.status_code}")
-    #         time.sleep(1)
-    #
-    #     log.critical(f"COULD NOT RETRIEVE GENE: {attempt}")
-    #     return "N/A"
+                else:
+                    protein_interface_only_flag = True
 
-    # @staticmethod
-    # def get_gene_from_fasta(fasta_text):
-    #     info_line = fasta_text.split('\n')[0]
-    #
-    #     # pattern = re.compile(r"GN=(.+)")
-    #     pattern = re.compile(r"GN=(\S+)(\s)")
-    #
-    #     # Does not exists in UniProt server.
-    #     if re.search(pattern, info_line) is None:
-    #         return "N/A"
-    #
-    #     gene = re.search(pattern, info_line).group(1)
-    #
-    #     return gene
+        return protein_interface_only_flag
+
+    def prepare_patient_protein_to_C_I_status_data(
+            self,
+            patients,
+    ):
+        log.info(f"Preparing patient_to_CI_status for {len(self.patients)} patients in {self.tcga}.")
+        patient_protein_to_C_I_status = dict()
+
+        for patient in tqdm(patients):
+            # print(f"Patient: {patient}")
+            patient_snv = self.get_patient_snv_data(patient)
+            patient_protein_to_mutations = get_patient_protein_to_mutations_dict(patient_snv)
+
+            for protein, mutations in patient_protein_to_mutations.items():
+
+                interface_only = self.is_protein_and_its_mutations_interface_only(
+                    protein, mutations
+                )
+
+                if interface_only:
+                    patient_protein_to_C_I_status[(protein, patient)] = "I"
+                    # if protein == "P04637":  # ["Q9Y616", "Q9C0D5", P04637]:
+                    #     print(f" - patient adding -- {patient} - {protein}.{mutations}")
+
+                else:
+                    patient_protein_to_C_I_status[(protein, patient)] = "C"
+
+        # Prepare patient_protein_mutation_to_C_I_status data
+        data = pd.DataFrame(
+            patient_protein_to_C_I_status.keys(),
+            columns=["PROTEIN", "PATIENT"]
+        )
+        data["C_I_STATUS"] = patient_protein_to_C_I_status.values()
+
+        self.patient_protein_to_C_I_status_data = data
+
+    def get_current_C_I_status(self, protein, patient):
+        c_i_status_data = self.patient_protein_to_C_I_status_data.copy()
+        [c_i_status] = c_i_status_data[
+            (c_i_status_data["PROTEIN"] == protein) &
+            (c_i_status_data["PATIENT"] == patient)
+        ]["C_I_STATUS"]
+
+        return c_i_status
+
+    def get_disruptive_prediction_prob(self, protein, mutation, interactor):
+        """
+        The returned value is the probability of Disruptive class, i.e.
+        1 - class1 probability.
+        """
+        query_data = self.disruptive_prediction_data[
+            (self.disruptive_prediction_data["UniProt_ID"] == protein) &
+            (self.disruptive_prediction_data["Mutation"] == mutation) &
+            (self.disruptive_prediction_data["Interactor_UniProt_ID"] == interactor)
+        ]
+
+        [incr_or_no_effect_prediction_probability] = query_data["Median_Probability"]
+        # Convert the class 1 probability to class 0 probability.
+        disruptive_prediction_probability = 1 - incr_or_no_effect_prediction_probability
+        # Round the number into two decimal places.
+        return round(disruptive_prediction_probability, 2)
 
     def construct_analysis_table(self):
         log.info("Constructing the analysis table ..")
@@ -358,9 +402,10 @@ class InteractionsPerPatient:
                 interactors = self.get_all_interactors(protein, mutation)
                 disruptive_interactors = self.get_disruptive_interactors(protein, mutation)
                 non_disruptive_interactors = self.get_non_disruptive_interactors(protein, mutation)
+                patient_C_I_status = self.get_current_C_I_status(protein=protein, patient=patient)
 
                 print(
-                    f"{patient}\t{protein}\t{mutation}\tAll interactors: {interactors}"
+                    f"{patient}\t{protein}\t{mutation}\tAll interactors: {interactors}\t{patient_C_I_status}"
                 )
 
                 patient_to_seen_protein_mutation_pairs[patient].append((protein, mutation))
@@ -382,7 +427,13 @@ class InteractionsPerPatient:
 
                         # Disruptive Interactors
                         "DISRUPTIVE_INTERACTORS": ','.join(
-                            map(str, map(lambda x: f"{x}:{self.gene_retriever.fetch(x)}", disruptive_interactors))
+                            map(str,
+                                map(
+                                    lambda x: f"{x}:"
+                                              f"{self.gene_retriever.fetch(x)}:"
+                                              f"{self.get_disruptive_prediction_prob(protein, mutation, x)}",
+                                    disruptive_interactors)
+                                )
                         ),
                         "NUM_DISRUPTIVE_INTERACTORS": len(disruptive_interactors),
 
@@ -391,6 +442,9 @@ class InteractionsPerPatient:
                             map(str, map(lambda x: f"{x}:{self.gene_retriever.fetch(x)}", non_disruptive_interactors))
                         ),
                         "NUM_NON_DISRUPTIVE_INTERACTORS": len(non_disruptive_interactors),
+
+                        # Core+Interface (C) and Interface (I) status
+                        "CORE_INTERFACE_VS_INTERFACE_STATUS": patient_C_I_status
                     }
                 )
 
@@ -414,6 +468,7 @@ class InteractionsPerPatient:
                 "NUM_DISRUPTIVE_INTERACTORS",
                 "NON_DISRUPTIVE_INTERACTORS",
                 "NUM_NON_DISRUPTIVE_INTERACTORS",
+                "CORE_INTERFACE_VS_INTERFACE_STATUS",
             ]
         )
 
