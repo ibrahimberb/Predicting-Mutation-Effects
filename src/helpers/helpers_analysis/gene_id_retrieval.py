@@ -37,9 +37,9 @@ class GeneIDRetriever:
             log.info("Creating new mapping data..")
             mapping_data = DataFrame(columns=["UNIPROT", "GENE"])
             mapping_data.set_index('UNIPROT', inplace=True)
+            # self.save_mapping_data()  <- this should belong here.
 
         self.mapping_data = mapping_data
-        # self.save_mapping_data()  <- may not needed.
         log.info("Mapping data loaded.")
 
     def save_mapping_data(self):
@@ -107,6 +107,38 @@ class GeneIDRetriever:
             return "N/A"
 
         gene = re.search(pattern, info_line).group(1)
+
+        return gene
+
+
+class GeneIDFetcher:
+    """Fetch only. Don't download."""
+    DATA_DIR = "helpers/helpers_analysis/gene_retrieval"
+    MAPPING_DATA_NAME = op.join(DATA_DIR, "UNIPROT_GENE_MAPPING.csv")
+
+    def __init__(self):
+        self.mapping_data = None
+        self.load_mapping_data()
+
+    def load_mapping_data(self):
+        if op.isfile(self.MAPPING_DATA_NAME):
+            log.info("Reading mapping data..")
+            mapping_data = read_csv(self.MAPPING_DATA_NAME, index_col="UNIPROT")
+        else:
+            log.critical("No mapping data found. Make sure you have the mapping data.")
+            raise FileNotFoundError("No mapping data found!")
+
+        self.mapping_data = mapping_data
+        log.info("Mapping data loaded.")
+
+    def fetch(self, protein):
+        log.debug(f"Fetching gene id of protein {protein}")
+
+        try:
+            gene = self.mapping_data.loc[protein]["GENE"]
+
+        except KeyError:
+            gene = "NAN"
 
         return gene
 
