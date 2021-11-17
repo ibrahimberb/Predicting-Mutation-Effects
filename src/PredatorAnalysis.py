@@ -11,6 +11,7 @@ from helpers.helpers_analysis.loaders import (
     load_prediction_dataset,
     load_elaspic_datasets,
     load_reference_dataset,
+    load_patient_interaction_dataset,
 )
 
 from helpers.mylogger import get_handler
@@ -33,6 +34,8 @@ from helpers.helpers_analysis.add_patient_core_count import add_patient_core_cou
 from helpers.helpers_analysis.add_patient_interface_count import add_patient_interface_count
 from helpers.helpers_analysis.counts_baseline_vs_our_method import counts_baseline_vs_our_method
 from helpers.helpers_analysis.add_cancermine_status import add_cancermine_status
+from helpers.helpers_analysis.add_num_interface_patients_disruptive_interactor import \
+    add_num_interface_patients_disruptive_interactor
 
 from helpers.helpers_analysis.plot_roc_curve import roc_curve_analysis
 
@@ -88,9 +91,10 @@ class PredatorAnalysis:
             prediction_id: RANDOM_ID,
             elaspic_core_path: Path,
             elaspic_interface_path: Path,
+            patient_interaction_data_path: Path,
             reference_data_name: REFERENCE_DATA_NAME,
             reference_data_spec_cohort_path: Path,
-            reference_data_path: Path
+            reference_data_path: Path,
     ):
 
         log.info(" - - Predator Analysis - - ")
@@ -106,12 +110,15 @@ class PredatorAnalysis:
         self.reference_data_name = reference_data_name
         self.reference_data_spec_cohort_path = reference_data_spec_cohort_path
         self.reference_data_path = reference_data_path
+        self.patient_interaction_data_path = patient_interaction_data_path
         self.data_materials = {}
         self.auc_scores = {}
 
         # setattr(self, self.tcga, {})
 
         self.load_datasets()
+
+        log.info("Initialization completed.\n")
 
     def load_datasets(self):
         load_snv_datasets(self.tcga, self.snv_path, self.data_materials)
@@ -126,6 +133,7 @@ class PredatorAnalysis:
             self.reference_data_path,
             self.data_materials
         )
+        load_patient_interaction_dataset(self.patient_interaction_data_path,  self.data_materials)
 
     def prepare_analysis(self):
         # Proteins
@@ -221,7 +229,15 @@ class PredatorAnalysis:
             elaspic_core_data=self.data_materials[f"{self.tcga}_elaspic_core_data"]
         )
 
-        # 9. Adding `BASELINE` and `OUR_METHOD` Columns
+        # update
+        # 9. Adding `NUM_INTERFACE_PATIENTS_DISRUPTIVE_INTERACTOR` Column.
+        log.debug(f"Adding `NUM_INTERFACE_PATIENTS_DISRUPTIVE_INTERACTOR` column ..")
+        add_num_interface_patients_disruptive_interactor(
+            preliminary_data,
+            self.data_materials["patient_interaction_data"],
+        )
+
+        # 10. Adding `BASELINE` and `OUR_METHOD` Columns
         log.debug(f"Adding `BASELINE` and `OUR_METHOD` columns ..")
         proteins_to_counts_baseline_dict, proteins_to_counts_our_method_dict = counts_baseline_vs_our_method(
             proteins=self.data_materials[f"{self.tcga}_elaspic_proteins"],
@@ -235,11 +251,11 @@ class PredatorAnalysis:
         add_baseline(preliminary_data, proteins_to_counts_baseline_dict)
         add_our_method(preliminary_data, proteins_to_counts_our_method_dict)
 
-        # 10. Adding `OUR_METHOD / BASELINE` Column
+        # 11. Adding `OUR_METHOD / BASELINE` Column
         log.debug(f"Adding `OUR_METHOD / BASELINE` column ..")
         preliminary_data["OUR_METHOD/BASELINE"] = preliminary_data["OUR_METHOD"] / preliminary_data["BASELINE"]
 
-        # 11. ELASPIC_COVERAGE
+        # 12. ELASPIC_COVERAGE
         log.debug(f"Adding `ELASPIC_COVERAGE` column ..")
         add_elaspic_coverage(
             preliminary_data,
@@ -247,7 +263,7 @@ class PredatorAnalysis:
             self.data_materials[f"{self.tcga}_snv_data_simplified"]
         )
 
-        # 12. Adding Reference Dataset Columns: General and Cohort Specific
+        # 13. Adding Reference Dataset Columns: General and Cohort Specific
         # TODO Code refactor: add_reference_data_status
         log.debug(f"Adding Reference Dataset Columns: General and Cohort Specific columns ..")
         if self.reference_data_name == ReferenceDataset.CANCERMINE:

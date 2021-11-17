@@ -173,3 +173,9 @@ def load_cgc_genes_cohort(reference_data_path, data_materials, cohort):
     log.debug(f"First five genes: {cgc_genes[:5]}")
 
     data_materials[f"cgc_{cohort}_genes"] = cgc_genes
+
+
+def load_patient_interaction_dataset(patient_interaction_data_path, data_materials):
+    log.debug(f"Loading Patient Interaction Dataset ..")
+    patient_interaction_data = pd.read_excel(patient_interaction_data_path)
+    data_materials["patient_interaction_data"] = patient_interaction_data
