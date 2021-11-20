@@ -126,5 +126,5 @@ class BinaryMatrix:
 
         else:
             # Export
-            self.binary_matrix.to_csv(filename, index=False)
+            self.binary_matrix.to_csv(filename)
             log.info(f'{filename} is exported.')
