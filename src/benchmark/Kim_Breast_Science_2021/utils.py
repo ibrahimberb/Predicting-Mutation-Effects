@@ -15,6 +15,19 @@ log.addHandler(handler)
 log.setLevel(logging.DEBUG)
 
 
+def is_valid_aa_change_mutation(item) -> bool:
+    """
+    Given items in the <mutation> form, check whether mutant is in
+    <letter><position><letter> form.
+    """
+
+    valid_form = re.match(r"^([A-Za-z][0-9]+[A-Za-z]_?[0-9]*)$", item)
+    if not valid_form:
+        return False
+
+    return True
+
+
 def is_valid_aa_change_in_experiment_id(item) -> bool:
     """
     Given items in the <gene>_<mutant> form, check whether mutant is in
@@ -35,7 +48,7 @@ class Kim2021Table(SupplementaryExcelParser):
     def __init__(
             self,
             supp_excel_path,
-            sheet_range=None,
+            sheet_range=(None, None),
             protein_col="Bait ID",
             mutation_col="Experiment.ID"
     ):
@@ -48,12 +61,8 @@ class Kim2021Table(SupplementaryExcelParser):
         self.sheet_names = self.get_sheet_names(supp_excel_path)
         log.info(f"Sheets found ({len(self.sheet_names)}): {self.sheet_names}")
 
-        if sheet_range is None:
-            # Sheet 0 is README
-            self.sheet_names = self.sheet_names[1:]
-        else:
-            log.info(f"Sheets range {sheet_range[0]} - {sheet_range[1]}")
-            self.sheet_names = self.sheet_names[sheet_range[0]: sheet_range[1]]
+        log.info(f"Sheets range {sheet_range[0]} - {sheet_range[1]}")
+        self.sheet_names = self.sheet_names[sheet_range[0]: sheet_range[1]]
 
         log.info(f"Sheets selected ({len(self.sheet_names)}): {self.sheet_names}")
 
