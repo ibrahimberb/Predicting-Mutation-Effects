@@ -1,0 +1,26 @@
+,Column,Description,Output Program
+0,Experiment.ID,"Bait, for baits with mutations the mutant is indicated after a ""_""",
+1,Bait,Bait gene name,
+2,Bait ID,Uniprot ID for bait,
+3,Prey,Prey gene name,
+4,Prey ID,Uniprot ID for prey,
+5,AvePSM,Average spectral counts for the prey protein across all replicates,CompPASS
+6,Z,Z-score,CompPASS
+7,WD,WD-score,CompPASS
+8,Entropy,Entropy score,CompPASS
+9,Z_percentile_perBait,Z score normalized by bait,CompPASS
+10,WD_percentile_perBait,WD score normalized by bait,CompPASS
+11,Spec,"Spectral counts for prey protein separated by ""|"" for each replicate",SAINTexpress
+12,ctrlCounts,"Spectral counts for prey protein separated by ""|"" for each control in which expression of 3xFLAG-tagged baits was not induced",SAINTexpress
+13,Saintscore,"SaintExpress score (0-1 scale), with 1 being most confidence in PPI.",SAINTexpress
+14,logOddsScore,log likelihood ratio of the observed data over the expected value,SAINTexpress
+15,FoldChange,Fold change of prey protein in bait purifications as compared to control purifications,SAINTexpress
+16,BFDR,Bayesian false discovery rate,SAINTexpress
+17,PPI Score,[WD_percentile_perBait + (1-BFDR)]/2,
+18,Uniprot-interaction,Uniprot ID (Bait-Prey),
+19,Comparison to IMEx,Novelty of PPI based on IMEx database,
+20,Comparison to BioPlex2,Novelty of PPI based on BioPlex2 database,
+21,Comparison to BIOGRID,Novelty of PPI based on BIOGRID database,
+22,Comparison to CORUM,Novelty of PPI based on CORUM database,
+23,All public DB novelty,"Novelty of PPI based on public database (IMEx, BioPlex2, BIOGRID, and CORUM)",
+24,Npat,Number of patients (TCGA BC cohort) with non-synonymous mutations in a given prey gene,

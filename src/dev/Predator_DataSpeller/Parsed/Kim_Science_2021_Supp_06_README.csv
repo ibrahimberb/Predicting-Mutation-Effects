@@ -1,0 +1,9 @@
+,Column,Description
+0,Bait,Gene entry for bait
+1,Bait Uniprot,Uniprot ID for bait
+2,Prey,Gene entry for prey
+3,Prey Uniprot,Uniprot ID for prey
+4,DIS,"Differential interaction score where positive score means specific PPI unique to either MCF7 or MDA-MB-231, while negative score means PPIs unique to MCF10A"
+5,BFDR,Bayesian false discovery rate of the PPI specificity as determined by the DIS
+6,Cell,Cell line where differential PPIs were detected
+7,Info,(DIS:BFDR) for other two cell lines
