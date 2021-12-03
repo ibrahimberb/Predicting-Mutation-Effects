@@ -3,6 +3,7 @@ from pathlib import Path
 import os
 import os.path as op
 from datetime import datetime
+from src.helpers.helpers_analysis.gene_id_retrieval import GeneIDFetcher
 
 
 def get_sheet_names(excel_path):
@@ -82,18 +83,27 @@ class FindInScienceArticles:
         self.entries = []
         self.standardized_path = standardized_path
         self.data = None
+        self.gene_id_fetcher = GeneIDFetcher()
 
     def look_up(self, protein, interactor):
         found_files = search_in_parsed_standardized(protein, interactor, self.standardized_path)
         found_flag = bool(len(found_files))
         self.entries.append(
-            (self.tcga, protein, interactor, found_flag, found_files)
+            (
+                self.tcga,
+                protein,
+                self.gene_id_fetcher.fetch(protein),
+                interactor,
+                self.gene_id_fetcher.fetch(interactor),
+                found_flag,
+                found_files
+            )
         )
 
     def construct_table(self):
         data = pd.DataFrame(
             self.entries, columns=[
-                "TCGA", "PROTEIN", "INTERACTOR", "FOUND_FLAG", "FOUND_FILES"
+                "TCGA", "PROTEIN", "GENE", "INTERACTOR_PROTEIN", "INTERACTOR_GENE", "FOUND_FLAG", "FOUND_FILES"
             ]
         )
         self.data = data
@@ -108,6 +118,6 @@ class FindInScienceArticles:
         file_name = op.join(file_path, file_name)
         if op.isfile(file_name):
             raise FileExistsError
-        
+
         self.data.to_csv(file_name, index=False)
         print("Table extracted.")
