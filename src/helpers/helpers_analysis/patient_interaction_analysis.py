@@ -254,6 +254,18 @@ class PatientInteractionAnalysis:
         )
 
         data_concated = pd.concat([data_1, data_2], axis=1)
+
+        # notify when GENERAL OCCURRENCE differs from number of patients: this happens when
+        # a gene is mutated multiple times in the same patient.
+        count_difference = data_concated[
+            data_concated["GENERAL_OCCURRENCE"] != data_concated["#_PATIENTS_A_DISR_B"]
+        ]
+        if not count_difference.empty:
+            log.warning(
+                f"There is a difference between counts."
+                f"GENE: {gene_A} INTERACTOR(S): {', '.join(count_difference['PROTEIN_GENE_B'])}"
+            )
+
         # display(data_concated)
         return data_concated
 
