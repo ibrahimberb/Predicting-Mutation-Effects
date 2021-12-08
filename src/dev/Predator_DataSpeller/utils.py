@@ -1,8 +1,13 @@
+import logging
+
 import pandas as pd
 from pathlib import Path
 import os
 import os.path as op
 from datetime import datetime
+
+from IPython.core.display import display
+
 from src.helpers.helpers_analysis.gene_id_retrieval import GeneIDFetcher
 
 
@@ -66,7 +71,7 @@ def find_in_single_standardized_data(standardized_data, protein, interactor):
 
 
 def search_in_parsed_standardized(protein, interactor, standardized_path="ParsedStandardized"):
-    files = os.listdir(standardized_path)
+    files = [file for file in os.listdir(standardized_path) if ".csv" in file]
     found_file_names = []
     for file in files:
         data_path = op.join(standardized_path, file)
@@ -85,20 +90,39 @@ class FindInScienceArticles:
         self.data = None
         self.gene_id_fetcher = GeneIDFetcher()
 
-    def look_up(self, protein, interactor):
+    def look_up(self, protein, interactor, append=False):
         found_files = search_in_parsed_standardized(protein, interactor, self.standardized_path)
         found_flag = bool(len(found_files))
-        self.entries.append(
-            (
-                self.tcga,
-                protein,
-                self.gene_id_fetcher.fetch(protein),
-                interactor,
-                self.gene_id_fetcher.fetch(interactor),
-                found_flag,
-                found_files
+        if append:
+            self.entries.append(
+                (
+                    self.tcga,
+                    protein,
+                    self.gene_id_fetcher.fetch(protein),
+                    interactor,
+                    self.gene_id_fetcher.fetch(interactor),
+                    found_flag,
+                    found_files
+                )
             )
-        )
+        else:
+            display(
+                pd.DataFrame(
+                    [
+                        (
+                            self.tcga,
+                            protein,
+                            self.gene_id_fetcher.fetch(protein),
+                            interactor,
+                            self.gene_id_fetcher.fetch(interactor),
+                            found_flag,
+                            found_files
+                        )
+                    ], columns=[
+                        "TCGA", "PROTEIN", "GENE", "INTERACTOR_PROTEIN", "INTERACTOR_GENE", "FOUND_FLAG", "FOUND_FILES"
+                    ]
+                )
+            )
 
     def construct_table(self):
         data = pd.DataFrame(
