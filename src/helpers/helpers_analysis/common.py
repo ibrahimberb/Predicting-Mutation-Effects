@@ -78,7 +78,7 @@ def save_to_excel(prediction_file_path, preliminary_data, file_name, export_flag
 
         contents = []
         for column_name in preliminary_data.columns:
-            column_name = column_name.replace('/', '_div_')  # replace forward shash with '_div_' if exists.
+            column_name = column_name.replace('/', '_div_')  # replace forward slash with '_div_' if exists.
             filename = "../data/column_descriptions/" + column_name + ".txt"
             with open(filename, 'r') as file:
                 content = file.read()  # .split("\n")
