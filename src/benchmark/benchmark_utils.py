@@ -164,13 +164,14 @@ class SupplementaryExcelParser:
             raise NotImplementedError("Pairs are not filled.")
 
         if op.isfile(filename):
+            log.error(f"You already have the file {filename}")
             raise FileExistsError(f"You already have the file {filename}")
 
         with open(filename, "w") as file_out:
             for pair in sorted(self.pairs):
                 file_out.write(f"{pair[0]}.{pair[1]}\n")
 
-        print("Input pairs are extracted.")
+        log.info("Input pairs are extracted.")
 
     @staticmethod
     def load_excel(excel_path, sheet_name):
@@ -179,9 +180,18 @@ class SupplementaryExcelParser:
         log.debug(f"Excel sheet {sheet_name} is loaded.")
         return data
 
+    @staticmethod
+    def get_sheet_names(excel_path):
+        excel = pd.ExcelFile(excel_path)
+        excel_sheet_names = excel.sheet_names  # see all sheet names
+        return excel_sheet_names
+
 
 def get_mutation_corrected(mutation):
-    """Given mutation may have lower case letters. Here, convert it to proper form."""
+    """
+    Given mutation may have lower case letters. Here, convert it to proper form.
+    E.g. r71g → R71G
+    """
     mutation_match = re.match(r"^([A-Za-z][0-9]+[A-Za-z]_?[0-9]*)$", mutation)
     if not mutation_match:
         # I could also change here to: # return None
@@ -196,3 +206,5 @@ def split_pairs_tuple(pairs):
     :return:
     """
     return pairs[0], get_mutation_corrected(pairs[1])
+
+
