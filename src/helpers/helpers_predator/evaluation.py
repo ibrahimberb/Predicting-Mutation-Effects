@@ -355,10 +355,11 @@ class EvaluationValid:
         )
 
 
-def cross_val_score_feature_comparison(X, y, scoring, n_repeats, n_jobs):
+def cross_val_score_feature_comparison(X, y, scoring, n_repeats, n_jobs, clf=None):
     # In calculation of scores, cross-validation is repeated n times, which yields a total of 10*n folds.
     # E.g. if n=10, it means cross-validation is repeated 10 times with a total of 100 folds.
-    clf = get_default_classifier(random_state=42)
+    if clf is None:
+        clf = get_default_classifier(random_state=42)
     # Std of each scores can be added: scores.mean() → scores.std()
     return (round(cross_val_score(clf, X, y,
                                   cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=n_repeats),
