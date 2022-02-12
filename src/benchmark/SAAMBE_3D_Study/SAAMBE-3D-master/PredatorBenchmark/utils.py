@@ -1,3 +1,9 @@
+import urllib.request
+import os
+from datetime import datetime
+import os.path as op
+
+
 def mutation_effect_label_binner(train_data):
     """
     Mutation Effect label binning is only applied to train_data.
@@ -28,7 +34,7 @@ def mutation_effect_label_binner(train_data):
     replace_map = {"Mutation_Effect_Label": labels_to_bins}
 
     # Size of dataframe before binning.
-    print(f"Size of dataframe before binning: {train_data.shape}")
+    print("Size of dataframe before binning: {}".format(train_data.shape))
 
     # Modifications will be done on train_data_binned.
     train_data_binned = train_data.copy()
@@ -45,7 +51,7 @@ def mutation_effect_label_binner(train_data):
     train_data_binned.reset_index(drop=True, inplace=True)
 
     # Size of dataframe after binning.
-    print(f"Size of dataframe after binning: {train_data_binned.shape}")
+    print("Size of dataframe after binning: {}".format(train_data_binned.shape))
 
     # First 5 rows of binned data.
     print("Train Data Binned:")
@@ -57,9 +63,6 @@ def mutation_effect_label_binner(train_data):
     return train_data_binned
 
 
-import urllib.request
-import os
-
 # download the pdb file from Protein Data Bank
 def download_pdb(pdb_id):
     # print the status of the download
@@ -70,8 +73,7 @@ def download_pdb(pdb_id):
     # create a folder named pdb_files if it doesn't exist
     if not os.path.exists("pdb_files"):
         os.makedirs("pdb_files")
-        
-    
+
     file_path = os.path.join("pdb_files", file_name)
         
     if not os.path.exists(file_path):
@@ -80,3 +82,18 @@ def download_pdb(pdb_id):
     else:
         print("File already exists")
         return
+
+
+def save_prediction_data(predator_benchmark_dir, prediction_file_name, prediction_data):
+    file_date = datetime.now().strftime("%Y-%m-%d")
+    prediction_file_name = "{}_{}.csv".format(prediction_file_name, file_date)
+    prediction_data.to_csv(op.join(predator_benchmark_dir, prediction_file_name), index=False)
+    print("Prediction data `{}`is exported.".format(op.join(predator_benchmark_dir, prediction_file_name)))
+
+
+def save_errors(errors, file_path):
+    with open(file_path, "w") as f:
+        for error in errors:
+            f.write("%s\n" % error)
+            
+    print("Errors written to file: " + file_path)

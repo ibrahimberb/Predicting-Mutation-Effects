@@ -1,0 +1,2 @@
+Please check the PDB file, there is no coordinate at the mutation site
+Wild type amino acid does not match the structure.
