@@ -3,12 +3,12 @@
 import pandas as pd
 
 
-TRAIN_DATA_PATH = r"../../"
+TRAIN_DATA_PATH = r"../../../"
 
 
 from src.helpers.helpers_analysis.convert_primary_isomer import convert_primary_isomer
 
-train_data_740 = pd.read_csv("../../processed_data_740.csv")
+train_data_740 = pd.read_csv("../../../processed_data_740.csv")
 triplets_data = train_data_740[["UniProt_ID", "Mutation", "Interactor_UniProt_ID"]].copy()
 triplets_data = convert_primary_isomer("Interactor_UniProt_ID", triplets_data)
 triplets_data = convert_primary_isomer("UniProt_ID", triplets_data)

@@ -1,4 +1,4 @@
-from src.benchmark.benchmark_utils import (
+from src.benchmark.experimental_studies.benchmark_utils import (
     SupplementaryExcelParser,
     get_mutation_corrected
 )

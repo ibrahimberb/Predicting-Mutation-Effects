@@ -19,7 +19,7 @@ def save_prediction_data(predator_benchmark_dir, prediction_file_name, predictio
 def save_errors(errors, file_path):
     with open(file_path, "w") as f:
         for error in errors:
-            f.write("%s\n" % error)
+            f.write("Error type: %s\n" % error)
             
     print("Errors written to file: " + file_path)
 
