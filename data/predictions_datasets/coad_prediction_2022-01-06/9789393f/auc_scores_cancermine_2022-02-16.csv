@@ -1,0 +1,4 @@
+Method,default,default_coad,baseline_nonzero,baseline_nonzero_coad
+BASELINE,0.579,0.640,0.600,0.626
+OURS,0.563,0.598,0.580,0.587
+ELASPIC_COV,0.520,0.561,0.559,0.628
