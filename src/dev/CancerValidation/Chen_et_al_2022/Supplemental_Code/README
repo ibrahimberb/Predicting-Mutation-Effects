@@ -1,0 +1,10 @@
+This folder provides python functions for protein-protein interaction network analyses - 
+	
+	Compile_protein_interfaces.py
+	    - Codes to define a high-quality human protein-protein interaction network, in which the interface of each interaction is mapped at residue resolution.
+	
+	Calculate_interface_enrichment.py
+	    - A function to calculate the enrichment of a given set of mutations on protein interaction interfaces.
+	
+	Compute_network_properties.py
+	    - Functions to compute network properties (degree and betweenness) of specific proteins and protein interactions in the interactome. 
