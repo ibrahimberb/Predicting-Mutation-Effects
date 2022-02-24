@@ -57,7 +57,7 @@ def main():
     }
 
     train_data = read_train_data(TRAIN_DATA_PATH)
-    prediction_data = train_data[["Mutation_Effect_Label", "UniProt_ID", "Mutation", "Interactor_UniProt_ID"]].copy()
+    prediction_data = train_data.copy()
 
     errors = []
     error_messages = set()
