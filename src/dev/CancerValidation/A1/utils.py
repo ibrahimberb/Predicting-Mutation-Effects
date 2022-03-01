@@ -1,4 +1,11 @@
+import pickle
 import re
+from pathlib import Path
+from typing import Union
+
+import os.path as op
+from datetime import datetime
+
 import pandas as pd
 from tqdm.notebook import tqdm
 
@@ -144,7 +151,7 @@ class CancerValidation:
         plt.show()
 
         metrics_data = get_scoring_metrics(tcga_data_validation_processed)
-        num_entries = len(tcga_data)
+        num_entries = len(tcga_data_validation)
         counts = tcga_data_validation_processed["Validation"].value_counts().to_dict()
         num_disruptive = counts[0]
         num_non_disruptive = counts[1]
@@ -158,6 +165,58 @@ class CancerValidation:
             "data_validation_processed": tcga_data_validation_processed,
             "metrics_data": metrics_data,
         }
+
+    @staticmethod
+    def validate_single_class(
+            tcga_type: str,
+            output_already_calculated: dict,
+            single_class: int,
+    ):
+        """
+        Requires the positions to be already calculated.
+        """
+
+        tcga_data_validation = output_already_calculated["data_validation"]
+
+        print(f"Using the class {single_class} only.")
+        tcga_data_validation = tcga_data_validation[
+            tcga_data_validation["Prediction"] == single_class
+            ].copy()
+
+        tcga_data_validation_processed = process_validation_data(tcga_data_validation)
+        metrics_data = get_scoring_metrics(tcga_data_validation_processed)
+        num_entries = len(tcga_data_validation)
+        counts = tcga_data_validation_processed["Validation"].value_counts().to_dict()
+        num_disruptive = counts[0]
+        num_non_disruptive = counts[1]
+        metrics_data.insert(0, "TCGA", tcga_type)
+        metrics_data.insert(1, "#_Entries", num_entries)
+        metrics_data.insert(2, "#_Disruptive", num_disruptive)
+        metrics_data.insert(3, "#_Non_disruptive", num_non_disruptive)
+
+        return {
+            "data_validation": tcga_data_validation,
+            "data_validation_processed": tcga_data_validation_processed,
+            "metrics_data": metrics_data,
+        }
+
+    @staticmethod
+    def extract_output_dict(name, dict_obj):
+        folder_path = "outputs"
+        Path(f"{folder_path}").mkdir(parents=True, exist_ok=True)
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        file_name = f"{name}_{current_date}.pickle"
+        file_path = op.join(folder_path, file_name)
+        if op.exists(file_path):
+            raise FileExistsError("File already exists")
+
+        pickle.dump(dict_obj, open(file_path, "wb"))
+        print("Object extracted successfully.")
+
+    @staticmethod
+    def load_output_dict(pickle_path):
+        obj_loaded = pickle.load(open(pickle_path, "rb"))
+        return obj_loaded
 
 
 def test_entry_not_found(df, p, i):
@@ -212,4 +271,3 @@ def process_validation_data(tcga_data: pd.DataFrame):
     tcga_processed = tcga_processed.astype({"Validation": "int"})
 
     return tcga_processed
-
