@@ -2,13 +2,13 @@ from collections import Counter
 
 from .gene_id_retrieval import GeneIDFetcher
 from .loaders import load_snv_datasets
-from pandas import DataFrame
-from .protein_id_retrieval import ProteinIDFetcher
+# from pandas import DataFrame
+# from .protein_id_retrieval import ProteinIDFetcher
 from ..mylogger import get_handler
 import logging
 from tqdm.auto import tqdm
 import pandas as pd
-from IPython.display import display
+# from IPython.display import display
 
 import os.path as op
 from datetime import datetime
@@ -22,6 +22,9 @@ log.setLevel(logging.DEBUG)
 
 
 class PatientInteractionAnalysis:
+
+    UNIPROT_GENE_MAPPING_PATH = "../helpers/helpers_analysis/gene_retrieval/UNIPROT_GENE_MAPPING.csv"
+
     def __init__(
             self,
             tcga,
@@ -35,6 +38,8 @@ class PatientInteractionAnalysis:
         self.patients = None
         self.patient_to_snv_data = None
         self.patient_interaction_data = None
+
+        self.gene_id_fetcher = GeneIDFetcher(self.UNIPROT_GENE_MAPPING_PATH)
 
         self.load_snv_data()
         self.load_patient_ids()
@@ -70,6 +75,9 @@ class PatientInteractionAnalysis:
     def load_patient_interaction_data(self):
         log.debug("patient interaction data patient data ..")
         patient_interaction_data = pd.read_excel(self.patient_interaction_data_path)
+        patient_interaction_data = patient_interaction_data[
+            patient_interaction_data["CORE_INTERFACE_VS_INTERFACE_STATUS"] == "I"
+        ]
         self.patient_interaction_data = patient_interaction_data
 
     def get_patients_with(self, identifier, identifier_type):
@@ -208,6 +216,72 @@ class PatientInteractionAnalysis:
 
         return identifier_disruptive_interactors_unique
 
+    def get_counts_summary_table_protein(self, protein_A):
+        interactor_count_pairs = self.get_disrupted_interactors(
+            protein_A, identifier_type="protein", return_counter=False
+        )
+
+        log.debug(f"interactors: {interactor_count_pairs}")
+
+        entries = []
+        for interactor_protein_protein in interactor_count_pairs:
+            interactor_protein, _  = interactor_protein_protein.split(':')
+            patients_tuple = self.get_patients_with_disruptive_interaction_protein(
+                protein_A=protein_A, protein_B=interactor_protein
+            )
+            patients_protein_A_disrupts_B, patients_protein_B_disrupts_A, patients_intersection = patients_tuple
+            entries.append(
+                (
+                    len(patients_protein_A_disrupts_B),
+                    patients_protein_A_disrupts_B,
+                    len(patients_protein_B_disrupts_A),
+                    patients_protein_B_disrupts_A,
+                    len(patients_intersection),
+                    patients_intersection
+                )
+            )
+
+        # Will be concating two dataframes side by side.
+        data_1 = pd.DataFrame(
+            self.get_disrupted_interactors(
+                protein_A, identifier_type="protein", return_counter=True, most_common=True
+            ), columns=["PROTEIN_GENE_B", "GENERAL_OCCURRENCE"]
+        )
+        # Insert TCGA type as the first column value.
+        data_1.insert(0, "TCGA", f"{self.tcga}")
+        # Insert protein_A as the second column value.
+        data_1.insert(1, "PROTEIN_A", f"{protein_A}")
+        # Insert gene ID of protein_A as the third column value.
+        gene_A_converted = self.gene_id_fetcher.fetch(protein=protein_A)
+        data_1.insert(2, "GENE_A", f"{gene_A_converted}")
+
+        data_2 = pd.DataFrame(
+            entries, columns=[
+                "#_PATIENTS_A_DISR_B",
+                "PATIENTS_A_DISR_B",
+                "#_PATIENTS_B_DISR_A",
+                "PATIENTS_B_DISR_A",
+                "#_PATIENTS_INTERSECTION",
+                "PATIENTS_INTERSECTION"
+            ]
+        )
+
+        data_concated = pd.concat([data_1, data_2], axis=1)
+
+        # notify when GENERAL OCCURRENCE differs from number of patients: this happens when
+        # a protein is mutated multiple times in the same patient.
+        count_difference = data_concated[
+            data_concated["GENERAL_OCCURRENCE"] != data_concated["#_PATIENTS_A_DISR_B"]
+            ]
+        if not count_difference.empty:
+            log.warning(
+                f"There is a difference between counts."
+                f"PROTEIN: {protein_A} INTERACTOR(S): {', '.join(count_difference['PROTEIN_GENE_B'])}"
+            )
+
+        # display(data_concated)
+        return data_concated
+
     def get_counts_summary_table(self, gene_A):
         interactor_count_pairs = self.get_disrupted_interactors(
             gene_A, identifier_type="gene", return_counter=False
@@ -269,6 +343,26 @@ class PatientInteractionAnalysis:
         # display(data_concated)
         return data_concated
 
+    def export_counts_summary_table_protein(self, folder_path, protein_A, file_extension="csv"):
+
+        summary_table_protein_A = self.get_counts_summary_table_protein(protein_A)
+
+        gene_A_converted = self.gene_id_fetcher.fetch(protein=protein_A)
+        log.debug(f"Exporting Counts Summary Table {self.tcga} {protein_A} {gene_A_converted}..")
+        file_name = f"{self.tcga}_{protein_A}_{gene_A_converted}"
+        file_name = op.join(folder_path, file_name)
+        file_date = datetime.today().strftime('%Y-%m-%d')
+        file_name = f'{file_name}_{file_date}.{file_extension}'
+
+        # Ensure the file is not exists before creating to prevent overwriting.
+        if op.isfile(file_name):
+            log.warning(f"File {file_name} is already exist.\n"
+                        "To overwrite existing file, use `overwrite=True`.")
+        else:
+            # Export
+            summary_table_protein_A.to_csv(file_name, index=False)
+            log.info(f'{file_name} is exported successfully.')
+
     def export_counts_summary_table(self, folder_path, gene_A, file_extension="csv"):
 
         summary_table_gene_A = self.get_counts_summary_table(gene_A)
@@ -288,14 +382,14 @@ class PatientInteractionAnalysis:
             summary_table_gene_A.to_csv(file_name, index=False)
             log.info(f'{file_name} is exported successfully.')
 
-
+    # This is deprecated ..
     def get_patients_with_disruptive_interaction(self, gene_A, gene_B, verbose=False):
         """
         :param gene_A: Host gene
         :param gene_B: Interactor gene
         :return: patients_gene_A_disrupts_B, patients_gene_B_disrupts_A, patients_intersection
         """
-
+        raise DeprecationWarning
         def _is_gene_exist(x, search_gene) -> bool:
             """
             Checks if any interactions in string x is the search gene.
@@ -357,9 +451,86 @@ class PatientInteractionAnalysis:
             patients_gene_A_disrupts_B, patients_gene_B_disrupts_A, patients_intersection
         )
 
+    # todo: this functions can be generalized with `identifier`
+    def get_patients_with_disruptive_interaction_protein(self, protein_A, protein_B, verbose=False):
+        """
+        :param protein_A: Host protein
+        :param protein_B: Interactor protein
+        :return: patients_protein_A_disrupts_B, patients_protein_B_disrupts_A, patients_intersection
+        """
+
+        identifier_pos = 0  # protein
+
+        def _is_protein_exist(x, search_protein) -> bool:
+            """
+            Checks if any interactions in string x is the search protein.
+            :param x:
+            :param search_protein:
+            :return:
+            """
+            # Handling `nan` values.
+            if isinstance(x, float):
+                return False
+
+            protein_gene_prob_list = x.split(',')
+            for protein_gene_prob in protein_gene_prob_list:
+                protein, _, _ = protein_gene_prob.split(':')
+                if search_protein == protein:
+                    return True
+
+            return False
+
+        # Patient interaction data with given protein (i.e. filtering for protein_A)
+        protein_A_patient_interaction_data = self.patient_interaction_data[
+            self.patient_interaction_data["PROTEIN_GENE"].apply(lambda x: x.split(':')[identifier_pos]) == protein_A
+            ].copy()
+
+        # Patient interaction data with given interactor protein. (i.e. filtering for protein_B)
+        protein_B_patient_interaction_data = self.patient_interaction_data[
+            self.patient_interaction_data["PROTEIN_GENE"].apply(lambda x: x.split(':')[identifier_pos]) == protein_B
+            ].copy()
+
+        # Patients where protein A disrupts protein B
+        if protein_A_patient_interaction_data.empty:
+            patients_protein_A_disrupts_B = set()
+        else:
+            patients_protein_A_disrupts_B = set(
+                protein_A_patient_interaction_data[
+                    protein_A_patient_interaction_data["DISRUPTIVE_INTERACTORS"].apply(
+                        lambda x: _is_protein_exist(x, protein_B)
+                    )
+                ]["PATIENT"].unique())
+
+        # Patients where protein B disrupts protein A
+        if protein_B_patient_interaction_data.empty:
+            patients_protein_B_disrupts_A = set()
+        else:
+            patients_protein_B_disrupts_A = set(
+                protein_B_patient_interaction_data[
+                    protein_B_patient_interaction_data["DISRUPTIVE_INTERACTORS"].apply(
+                        lambda x: _is_protein_exist(x, protein_A)
+                    )
+                ]["PATIENT"].unique())
+
+        # add intersection.
+        patients_intersection = set().intersection(
+            patients_protein_A_disrupts_B, patients_protein_B_disrupts_A
+        )
+        if verbose:
+            print(f"PROTEIN_A: {protein_A}")
+            print(f"PROTEIN_B: {protein_B}")
+            print(f"patients_protein_A_disrupts_B ({len(patients_protein_A_disrupts_B)}): \n {patients_protein_A_disrupts_B}")
+            print(f"patients_protein_B_disrupts_A ({len(patients_protein_B_disrupts_A)}): \n {patients_protein_B_disrupts_A}")
+            print(f"Intersection ({len(patients_intersection)}): \n{patients_intersection}")
+            print('- - - - - - - - - - - - - - - - - - - - - -')
+
+        return (
+            patients_protein_A_disrupts_B, patients_protein_B_disrupts_A, patients_intersection
+        )
+
     def get_disruptive_mutual_exclusivity_data(self, protein):
         # uses counts.
-        gene = GeneIDFetcher().fetch(protein=protein)
+        gene = self.gene_id_fetcher.fetch(protein=protein)
         identifier_1_disruptive_interactors_to_values = self.get_disrupted_interactors(
             protein, identifier_type="protein", return_counter=True
         )
@@ -403,7 +574,7 @@ class PatientInteractionAnalysis:
 
     def get_disruptive_mutual_exclusivity_proba_data(self, protein):
         # uses probability sums.
-        gene = GeneIDFetcher().fetch(protein=protein)
+        gene = self.gene_id_fetcher.fetch(protein=protein)
         identifier_1_disruptive_interactors_to_values = self.get_disrupted_interactors_probabilities(
             protein, identifier_type="protein"
         )
@@ -452,7 +623,7 @@ class PatientInteractionAnalysis:
         else:
             mutual_exclusivity_data = self.get_disruptive_mutual_exclusivity_data(protein)
 
-        gene = GeneIDFetcher().fetch(protein=protein)
+        gene = self.gene_id_fetcher.fetch(protein=protein)
 
         log.debug(f"Exporting Mutual Exclusivity {self.tcga} {protein} ..")
         file_name = f"{self.tcga}_{protein}_{gene}"
