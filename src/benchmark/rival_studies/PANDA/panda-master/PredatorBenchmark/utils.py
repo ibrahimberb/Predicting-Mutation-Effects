@@ -46,7 +46,6 @@ def get_mutated_sequence(sequence, mutation):
     # return sequence[:position] + new_aa + sequence[position+1:]
 
 
-
 def download_protein_sequence(protein, output_dir, mutation=None):
     """
     Download the protein sequence from Uniprot.
@@ -83,8 +82,7 @@ def download_protein_sequence(protein, output_dir, mutation=None):
         save_sequence(sequence, protein, output_dir)
         return sequence
 
-        
-    
+
 def save_sequence(sequence, filename, output_dir):
     """
     Save the sequence to a fasta file.
@@ -123,7 +121,6 @@ def test_mutate_sequence(original_sequence, mutated_sequence, mutation):
             print("The character at position {} is different between the two sequences: {} and {}".format(position, aa_1, aa_2))
             assert mutation == aa_1 + str(position) + aa_2, "The mutation is not correct"
             break
-    
 
     print("\033[92m" + "The mutation is correct" + "\033[0m")
 
