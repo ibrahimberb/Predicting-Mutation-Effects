@@ -18,9 +18,14 @@ log.setLevel(logging.WARNING)
 class ProteinIDFetcher:
     """Fetch only. Don't download."""
     DATA_DIR = "helpers/helpers_analysis/gene_retrieval"
-    MAPPING_DATA_NAME = op.join(DATA_DIR, "UNIPROT_GENE_MAPPING.csv")
+    # MAPPING_DATA_NAME = op.join(DATA_DIR, "UNIPROT_GENE_MAPPING.csv")
 
-    def __init__(self):
+    def __init__(self, mapping_data_path=None):
+        if mapping_data_path is None:
+            self.MAPPING_DATA_NAME = op.join(self.DATA_DIR, "UNIPROT_GENE_MAPPING.csv")
+        else:
+            self.MAPPING_DATA_NAME = mapping_data_path
+
         self.mapping_data = None
         self.load_mapping_data()
 
