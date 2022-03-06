@@ -1,0 +1,2 @@
+TCGA,GENE,UniProt_ID,Mutation,Interactor_UniProt_ID,Prediction,Median_Probability,Disruptive_probability
+ESCA,H4C1,P62805,D69H,Q16778,0,0.0463,0.9537

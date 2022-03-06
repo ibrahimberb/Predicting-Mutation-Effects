@@ -1,0 +1,2 @@
+TCGA,GENE,UniProt_ID,Mutation,Interactor_UniProt_ID,Prediction,Median_Probability,Disruptive_probability
+GBM,UBE2M,P61081,P121T,Q9Y4K3,0,0.04076,0.95924
