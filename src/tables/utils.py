@@ -25,7 +25,6 @@ class MostFrequentlyDisruptedPartnersAdder:
             interactions_summary_folder_path, self.tcga
         )
         self.proteins = self.preliminary_data["PROTEIN"].tolist()
-        self.get_most_frequently_disrupted_partners_added_data()
 
     def get_most_frequently_disrupted_interaction(self, protein):
         try:
@@ -41,7 +40,13 @@ class MostFrequentlyDisruptedPartnersAdder:
         # display(protein_summary_table_highest)
         most_frequently_disrupted_partners = list(protein_summary_table_highest["PROTEIN_GENE_B"])
         most_frequently_disrupted_partners = [partner.split(":")[1] for partner in most_frequently_disrupted_partners]
-        return f'{", ".join(most_frequently_disrupted_partners)} ({highest_frequency})'
+
+        # If patient count is 1 or 2, we exclude them.
+        if highest_frequency <= 2:
+            return "-"
+
+        else:
+            return f'{", ".join(most_frequently_disrupted_partners)} ({highest_frequency})'
 
     def get_most_frequently_disrupted_partners_added_data(self):
         most_frequently_disrupted_partners = []
