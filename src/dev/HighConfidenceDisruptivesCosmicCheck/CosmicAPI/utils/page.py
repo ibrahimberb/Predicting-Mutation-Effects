@@ -65,7 +65,7 @@ def retrieve(driver):
     no_results_found_xpath = '//*[@id="root"]/div[2]/div/div[2]/div/h1'
     codon_intro_xpath = '//*[@id="root"]/div[2]/div/div[2]/div[1]'
 
-    max_attempt = 3
+    max_attempt = 10
     n_attempt = 0
     while True:
 
@@ -126,7 +126,6 @@ def get_grid_overlay_info(driver):
     log.debug("- - - - - - - - - ")
     grid_overlay_entries = []
     for grid_overlay in grid_overlays:
-        get_detailed_info()
         # log.debug(f"{grid_overlay.text}")
         log.debug(CosmicTierColors().get_tier(grid_overlay.get_attribute("style")))
         detailed_info = get_detailed_info(
@@ -148,11 +147,15 @@ def get_grid_overlay_info(driver):
     grid_overlay_data.insert(loc=1, column="CODON", value=codon)
     grid_overlay_data.insert(loc=2, column="CGC_STATUS", value=CGC_status)
 
+    # Assuming codons (positions) ranked by TIER, the first one should be the most significant tier.
+    most_significant_codon_tier = grid_overlay_data["TIER"][0]
+
     output = {
         "grid_overlay_data": grid_overlay_data,
         "gene": gene,
         "codon": codon,
         "CGC_status": CGC_status,
+        "most_significant_codon_tier": most_significant_codon_tier,
     }
 
     return output

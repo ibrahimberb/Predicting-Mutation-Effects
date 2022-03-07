@@ -34,6 +34,7 @@ class Entry:
             submitted=None,
             downloaded=None,
             error_encountered=None,
+            most_significant_codon_tier=None,
             CGC_status=None,
             url=None,
     ):
@@ -42,6 +43,7 @@ class Entry:
         self.error_encountered = error_encountered  # None
         self.submitted = submitted  # 1
         self.downloaded = downloaded  # 1
+        self.most_significant_codon_tier = most_significant_codon_tier # TIER_2
         self.CGC_status = CGC_status  # Tier 1
         self.url = url
 
@@ -53,7 +55,8 @@ class Entry:
                 "ERROR_ENCOUNTERED": [self.error_encountered],
                 "SUBMITTED": [self.submitted],
                 "DOWNLOADED": [self.downloaded],
-                "CGC_status": [self.CGC_status],
+                "CGC_STATUS": [self.CGC_status],
+                "MOST_SIGNIFICANT_CODON_TIER": [self.most_significant_codon_tier],
                 "URL": [self.url],
             }
         )

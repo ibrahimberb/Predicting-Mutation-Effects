@@ -29,6 +29,7 @@ class CosmicScraper:
         self.url = get_cosmic_url(gene, mutation)
         self.record = Record()
         self.CGC_status = None
+        self.most_significant_codon_tier = None
 
         self.driver = None
         self.resulting_data = None
@@ -60,6 +61,7 @@ class CosmicScraper:
         if response == SubmissionResponseMessages.ResultsFound:
             self.resulting_data = output["grid_overlay_data"]
             self.CGC_status = output["CGC_status"]
+            self.most_significant_codon_tier = output["most_significant_codon_tier"]
             # Saving CGC detailed information.
             save_CGC_data(self.resulting_data, self.gene, self.residue_position)
             submitted = 1
@@ -83,6 +85,7 @@ class CosmicScraper:
             submitted=submitted,
             downloaded=downloaded,
             error_encountered=error_encountered,
+            most_significant_codon_tier=self.most_significant_codon_tier,
             CGC_status=self.CGC_status,
             url=self.url
         )

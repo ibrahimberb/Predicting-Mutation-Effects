@@ -2,7 +2,6 @@ import os
 import pandas as pd
 import os.path as op
 import glob
-import numpy as np
 
 from MyScraper import CosmicScraper
 
