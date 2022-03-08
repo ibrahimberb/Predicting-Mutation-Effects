@@ -30,10 +30,12 @@ class BinaryMatrix:
     def __init__(
             self,
             tcga: str,
-            tcga_snv_path: Path
+            tcga_snv_path: Path,
+            filtering_pairs_filepath=None
     ):
         self.tcga = tcga.upper()
         self.tcga_snv_path = tcga_snv_path
+        self.filtering_pairs_filepath = filtering_pairs_filepath
 
         self.snv_data_simplified = None
         self.patients = None
@@ -46,9 +48,33 @@ class BinaryMatrix:
         self.load_patient_ids()
         self.load_proteins()
         self.load_patient_to_snv_data()
+
+        if self.filtering_pairs_filepath is None:
+            self.filtering_proteins = None
+        else:
+            self.filtering_proteins = self.get_existing_proteins()
+
         self.construct_binary_matrix()
 
-        self.test_binary_matrix()
+        if self.filtering_pairs_filepath is None:
+            self.test_binary_matrix()
+
+    def get_existing_proteins(self):
+        pairs_data = pd.read_csv(
+            self.filtering_pairs_filepath,
+            sep="_",
+            header=None,
+            names=["TCGA", "PROTEIN_GENE", "INTERACTOR_PROTEIN_GENE"],
+        )
+
+        pairs_data["PROTEIN"] = pairs_data["PROTEIN_GENE"].apply(lambda x: x.split(":")[0])
+        pairs_data["INTERACTOR_PROTEIN"] = pairs_data["INTERACTOR_PROTEIN_GENE"].apply(lambda x: x.split(":")[0])
+
+        proteins_exist = sorted(
+            set(pairs_data["PROTEIN"]).union(set(pairs_data["INTERACTOR_PROTEIN"]))
+        )
+
+        return proteins_exist
 
     def load_snv_data_simplified(self):
         log.debug("Loading SNV data simplified ..")
@@ -98,6 +124,16 @@ class BinaryMatrix:
         for patient in tqdm(self.patients):
             binary_matrix_data[patient] = self._get_protein_vector_patient(patient)
 
+        binary_matrix_data.index.name = "PROTEIN"
+
+        if self.filtering_pairs_filepath is not None:
+            overlapping_proteins = sorted(
+                set(self.filtering_proteins).intersection(
+                    set(binary_matrix_data.index)
+                )
+            )
+            binary_matrix_data = binary_matrix_data.loc[overlapping_proteins, :]
+
         self.binary_matrix = binary_matrix_data
         log.info("Constructing binary matrix completed.")
 
@@ -113,9 +149,10 @@ class BinaryMatrix:
 
         log.info("All tests pass.")
 
-    def extract(self, folder=None):
+    def extract(self, folder=None, compress=False):
         output_file_date = datetime.today().strftime('%Y-%m-%d')
-        filename = f"{self.tcga}_binary_matrix_{output_file_date}.csv"
+        filtered = "_filtered" if self.filtering_pairs_filepath is not None else ""
+        filename = f"{self.tcga}_binary_matrix_{output_file_date}{filtered}.csv"
 
         if folder is not None:
             filename = op.join(folder, filename)
@@ -126,5 +163,10 @@ class BinaryMatrix:
 
         else:
             # Export
-            self.binary_matrix.to_csv(filename)
-            log.info(f'{filename} is exported.')
+            if compress:
+                filename = f"{filename}.gz"
+                self.binary_matrix.to_csv(filename, compression="gzip")
+                log.info(f'{filename} is exported (compressed).')
+            else:
+                self.binary_matrix.to_csv(filename)
+                log.info(f'{filename} is exported.')
