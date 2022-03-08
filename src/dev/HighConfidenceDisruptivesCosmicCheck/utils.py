@@ -6,6 +6,7 @@ from pandas import DataFrame
 
 from IPython.display import display
 
+from src.dev.HighConfidenceDisruptivesCosmicCheck.CosmicAPI.utils.misc import get_residue_position
 from src.helpers.helpers_analysis.gene_id_retrieval import GeneIDFetcher
 
 UNIPROT_GENE_MAPPING_PATH = "../../helpers/helpers_analysis/gene_retrieval/UNIPROT_GENE_MAPPING.csv"
@@ -79,3 +80,61 @@ class HighConfidenceDisruptiveMutationsHelper:
         high_confidence_data.to_csv(file_path, index=False)
 
         print(f"{self.tcga} data is extracted to {file_path} successfully.")
+
+
+class CosmicResultsAttaching:
+    def __init__(self, cosmic_results_data):
+        self.cosmic_results_data = cosmic_results_data
+
+    @staticmethod
+    def find_in_cosmic_results(
+            cosmic_results_data: DataFrame,
+            gene: str,
+            mut: str
+    ) -> dict:
+
+        query = cosmic_results_data[
+            (cosmic_results_data["GENE"] == gene) &
+            (cosmic_results_data["RESIDUE_POSITION"] == int(get_residue_position(mut)))
+        ]
+
+        if query.empty:
+            query_result = {
+                "CGC_status": "NOT_FOUND",
+                "most_significant_codon_tier": "NOT_FOUND",
+            }
+
+        else:
+            [CGC_status] = query["CGC_STATUS"]
+            [most_significant_codon_tier] = query["MOST_SIGNIFICANT_CODON_TIER"]
+
+            query_result = {
+                "CGC_status": CGC_status,
+                "most_significant_codon_tier": most_significant_codon_tier,
+            }
+
+        return query_result
+
+    def attach_results(
+            self,
+            tcga_prediction_data: DataFrame,
+    ) -> DataFrame:
+
+        tcga_prediction_data_cosmic_results = tcga_prediction_data.copy()
+        cosmic_results = tcga_prediction_data_cosmic_results.apply(
+            lambda row: self.find_in_cosmic_results(
+                cosmic_results_data=self.cosmic_results_data,
+                gene=row["GENE"],
+                mut=row["Mutation"]
+            ), axis=1
+        )
+
+        tcga_prediction_data_cosmic_results["CGC_status"] = cosmic_results.apply(
+            lambda row: row["CGC_status"]
+        )
+
+        tcga_prediction_data_cosmic_results["MOST_SIGNIFICANT_CODON_TIER"] = cosmic_results.apply(
+            lambda row: row["most_significant_codon_tier"]
+        )
+
+        return tcga_prediction_data_cosmic_results
