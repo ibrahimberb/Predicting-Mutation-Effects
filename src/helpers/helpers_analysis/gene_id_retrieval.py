@@ -136,11 +136,23 @@ class GeneIDFetcher:
         self.mapping_data = mapping_data
         log.info("Mapping data loaded.")
 
-    def fetch(self, protein):
+    def fetch(self, protein, suppress_warning=True):
         log.debug(f"Fetching gene id of protein {protein}")
 
         try:
-            gene = self.mapping_data.loc[protein]["GENE"]
+            manual_mapping = {
+                "Q53F85": "DAXX",
+                "B4DWA2": "CASP7",
+                "Q13748": "TUBA3C",
+            }
+            if protein in manual_mapping:
+                if not suppress_warning:
+                    log.warning(f"Manual mapping used: {protein} : {manual_mapping[protein]} ")
+
+                gene = manual_mapping[protein]
+
+            else:
+                gene = self.mapping_data.loc[protein]["GENE"]
 
         except KeyError:
             gene = "NAN"
