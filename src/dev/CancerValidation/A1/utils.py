@@ -1,7 +1,9 @@
 import pickle
 import re
 from pathlib import Path
-from typing import Union
+from typing import List
+
+from IPython.display import display
 
 import os.path as op
 from datetime import datetime
@@ -20,12 +22,27 @@ from sklearn.metrics import (
     recall_score,
 )
 
+from src.helpers.mylogger import get_handler
+
+import logging
+
+handler = get_handler()
+
+log = logging.getLogger(__name__)
+log.handlers[:] = []
+log.addHandler(handler)
+log.setLevel(logging.DEBUG)
+
 
 class EntryNotFoundError(Exception):
     pass
 
 
 class BidirectionalEntriesFoundError(Exception):
+    pass
+
+
+class MultipleEntryFoundError(Exception):
     pass
 
 
@@ -89,6 +106,54 @@ class CancerValidation:
         else:
             return ClassLabels.NON_DISRUPTIVE
 
+    @staticmethod
+    def _handle_check_duplicated_entries(data, p_ires) -> List[int]:
+        """
+        Checks if all entries of given data duplicated. Each cell contains list in it.
+        If all entries are duplicated entries, then we have no problem, just get the res.
+        """
+        # display(data)
+
+        # In order for us to check if the entries are duplicated, we'll have to
+        # convert list item in the cells to tuple. Otherwise, we get the following error:
+        # TypeError: unhashable type: 'list'
+        data_tuple = data[["P1_IRES", "P2_IRES"]].applymap(lambda x: tuple(x))
+        data_tuple.duplicated(keep=False).all()
+
+        # no problem, then.
+        if p_ires == "P1_IRES":
+            [p1] = data["P1"].unique()
+            [p2] = data["P2"].unique()
+        elif p_ires == "P2_IRES":
+            [p2] = data["P1"].unique()
+            [p1] = data["P2"].unique()
+        else:
+            raise ValueError(f"Illegal argument provided for parameter `p_ires`: {p_ires}")
+
+        # check if all entries are duplicated
+        if data_tuple.duplicated(keep=False).all():
+
+            log.warning(
+                f"Multiple entries but they were duplicated. PROTEIN: {p1}, INTERACTOR: {p2}"
+            )
+            [p_res] = data_tuple[p_ires].unique()
+            p_res = list(p_res)
+
+            return p_res
+
+        else:
+            log.error("MultipleEntryError with following data: ")
+            display(data)
+            p_res_list = data[p_ires].tolist()
+            p_res = sorted(
+                set([item for sublist in p_res_list for item in sublist])
+            )
+            log.error(F"Returned RES: {p_res}")
+
+            return p_res
+            # data.to_csv("ERROR_data.csv", index=False)
+            # raise MultipleEntryFoundError
+
     def _get_entry(self, protein, interactor):
         a_b_interface_data = self.interfaces_data[
             (self.interfaces_data["P1"] == protein) &
@@ -106,12 +171,22 @@ class CancerValidation:
 
         # First data contains entry and the second one is empty
         elif len(a_b_interface_data) != 0 and len(b_a_interface_data) == 0:
-            [p1_res] = a_b_interface_data["P1_IRES"]
+            if len(a_b_interface_data) != 1:
+                p1_res = self._handle_check_duplicated_entries(a_b_interface_data, "P1_IRES")
+
+            else:
+                [p1_res] = a_b_interface_data["P1_IRES"]
+
             return a_b_interface_data, p1_res
 
         # First data is empty and the second one contains entry
         elif len(a_b_interface_data) == 0 and len(b_a_interface_data) != 0:
-            [p2_res] = b_a_interface_data["P2_IRES"]
+            if len(b_a_interface_data) != 1:
+                p2_res = self._handle_check_duplicated_entries(b_a_interface_data, "P2_IRES")
+
+            else:
+                [p2_res] = b_a_interface_data["P2_IRES"]
+
             return b_a_interface_data, p2_res
 
         # Both of them are empty
