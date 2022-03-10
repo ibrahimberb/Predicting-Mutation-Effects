@@ -58,6 +58,12 @@ class HighConfidenceDisruptiveMutationsHelper:
             value=high_confidence_data["UniProt_ID"].apply(lambda x: self.gene_id_fetcher.fetch(x))
         )
 
+        high_confidence_data.insert(
+            loc=4,
+            column="INTERACTOR_GENE",
+            value=high_confidence_data["Interactor_UniProt_ID"].apply(lambda x: self.gene_id_fetcher.fetch(x))
+        )
+
         self.high_confidence_data = high_confidence_data
 
     def extract_high_confidence_disruptive_mutations(self, view=False):
