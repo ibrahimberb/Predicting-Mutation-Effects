@@ -1,15 +1,38 @@
 from datetime import datetime
 from pathlib import Path
 import os.path as op
+from typing import Union
 
+import numpy as np
 from pandas import DataFrame
+import pandas as pd
 
 from IPython.display import display
 
 from src.dev.HighConfidenceDisruptivesCosmicCheck.CosmicAPI.utils.misc import get_residue_position
 from src.helpers.helpers_analysis.gene_id_retrieval import GeneIDFetcher
 
+from src.helpers.helpers_analysis.convert_primary_isomer import convert_primary_isomer
+
+from src.helpers.mylogger import get_handler
+import logging
+
+handler = get_handler()
+
+log = logging.getLogger(__name__)
+log.handlers[:] = []
+log.addHandler(handler)
+log.setLevel(logging.WARNING)
+
+
 UNIPROT_GENE_MAPPING_PATH = "../../helpers/helpers_analysis/gene_retrieval/UNIPROT_GENE_MAPPING.csv"
+
+
+# set pandas max column names unlimited
+pd.set_option('display.max_columns', None)
+
+# set width of the output
+pd.set_option('display.width', None)
 
 
 class HighConfidenceDisruptiveMutationsHelper:
@@ -144,3 +167,92 @@ class CosmicResultsAttaching:
         )
 
         return tcga_prediction_data_cosmic_results
+
+
+class ProveanScoreAttaching:
+    """
+    I think the simplest way of getting Provean scores from TCGA datasets
+    is using to using Predator (just data loading part, not prediction step).
+    Then I can retrieve scores from datasets one by one.
+    """
+
+    def __init__(
+            self,
+            tcga_cosmic_results_data: DataFrame,
+            tcga: str,
+            tcga_elaspic_results_data_path: Union[str, Path]
+    ):
+        self.tcga = tcga.lower()
+        assert self.tcga == tcga_cosmic_results_data["TCGA"].unique()[0].lower()
+        self.tcga_cosmic_results_data = tcga_cosmic_results_data
+        self.tcga_data_with_features = pd.read_csv(tcga_elaspic_results_data_path, sep="\t")
+        self.tcga_data_with_features = convert_primary_isomer(
+            column_name="Interactor_UniProt_ID", data=self.tcga_data_with_features
+        )
+        self.provean_attached_data = None
+
+    def attach_provean_scores(self):
+        retrieved_provean_scores = []
+        for index, row in self.tcga_cosmic_results_data.iterrows():
+            retrieved_provean_scores.append(
+                self._get_provean_score(
+                    protein=row["UniProt_ID"],
+                    mutation=row["Mutation"],
+                    interactor=row["Interactor_UniProt_ID"]
+                )
+            )
+
+        provean_attached_data = self.tcga_cosmic_results_data.copy()
+
+        provean_attached_data.insert(
+            loc=9,
+            column="PROVEAN",
+            value=retrieved_provean_scores,
+        )
+
+        self.provean_attached_data = provean_attached_data
+
+        return self.provean_attached_data
+
+    def _get_provean_score(self, protein, mutation, interactor):
+        """
+        I know Provean score is not related with interactor,
+        but here I will find correct entry.
+        """
+        query = self.tcga_data_with_features[
+            (self.tcga_data_with_features["UniProt_ID"] == protein) &
+            (self.tcga_data_with_features["Mutation"] == mutation) &
+            (self.tcga_data_with_features["Interactor_UniProt_ID"] == interactor)
+        ].copy()
+
+        query["Provean_score"] = query["Provean_score"].astype(float)
+
+        if len(query) != 1:
+            triplets_columns = ["UniProt_ID", "Mutation", "Interactor_UniProt_ID"]
+            if query[triplets_columns].duplicated(keep=False).all():
+                # no problem
+                try:
+                    [provean_score] = query["Provean_score"].unique()
+                except ValueError:
+                    # Take average of provean scores.
+                    log.warning(f"{protein=}")
+                    log.warning(f"{mutation=}")
+                    log.warning(f"{interactor=}")
+                    log.warning(f"Took average of {query['Provean_score'].unique()}")
+                    provean_score = np.mean(query["Provean_score"].unique())
+
+            else:
+                # print(f"{protein=}")
+                # print(f"{mutation=}")
+                # print(f"{interactor=}")
+                # display(query[["UniProt_ID", "Mutation", "Interactor_UniProt_ID", "Provean_score"]])
+                raise WillHandleLaterError
+
+        else:
+            [provean_score] = query["Provean_score"]
+
+        return provean_score
+
+
+class WillHandleLaterError(Exception):
+    """I will worry about it later."""
