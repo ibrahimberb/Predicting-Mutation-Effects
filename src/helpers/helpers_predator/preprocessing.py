@@ -53,7 +53,7 @@ def reduce_columns_tcga(tcga_data, initial_columns_target):
     return tcga_data
 
 
-def mutation_effect_label_binner(train_data):
+def mutation_effect_label_binner(train_data, mutation_effect_label_column_name="Mutation_Effect_Label"):
     """
     Mutation Effect label binning is only applied to train_data.
     Apply Label binning.
@@ -61,9 +61,6 @@ def mutation_effect_label_binner(train_data):
         - No effect + Increasing → 1
         - Decreasing → dropped
         - Causing → dropped
-
-    :param train_data:
-    :return:
     """
     # Displaying possible label categories.
     if log.level == logging.DEBUG:
@@ -84,7 +81,7 @@ def mutation_effect_label_binner(train_data):
         "mutation increasing rate(MI:1131)": 1,
     }
 
-    replace_map = {"Mutation_Effect_Label": labels_to_bins}
+    replace_map = {mutation_effect_label_column_name: labels_to_bins}
 
     # Size of dataframe before binning.
     log.debug(f"Size of dataframe before binning: {train_data.shape}")
@@ -97,7 +94,7 @@ def mutation_effect_label_binner(train_data):
 
     # Drop the entries with "IGNORED": 'mutation cusing' in this case.
     train_data_binned = train_data_binned[
-        train_data_binned["Mutation_Effect_Label"] != "IGNORED"
+        train_data_binned[mutation_effect_label_column_name] != "IGNORED"
     ]
 
     # Reset index of the dataframe to avoid any possible errors
@@ -111,7 +108,7 @@ def mutation_effect_label_binner(train_data):
     log.debug("Dataframe head: {}".format(train_data_binned.head()))
 
     # Confirming replacement of values are properly done. Mutation_Effect_Label only contains of 0 or 1.
-    assert set(train_data_binned["Mutation_Effect_Label"].value_counts().index) == {0, 1}
+    assert set(train_data_binned[mutation_effect_label_column_name].value_counts().index) == {0, 1}
 
     return train_data_binned
 
