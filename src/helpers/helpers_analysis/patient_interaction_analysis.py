@@ -544,14 +544,27 @@ class PatientInteractionAnalysis:
             mut_ex_value, len_s1, len_s2 = self.calculate_mutual_exclusivity(
                 protein, interactor_protein, return_num_patients=True
             )
+
+            patients_tuple = self.get_patients_with_disruptive_interaction_protein(
+                protein_A=protein, protein_B=interactor_protein
+            )
+            patients_protein_A_disrupts_B, patients_protein_B_disrupts_A, patients_intersection = patients_tuple
+
             # log.debug(f"{interactor} \t {mut_ex_value}")
             mutual_exclusivity_entries.append(
                 (
+                    self.tcga,
                     f"{protein}:{gene}",
                     len_s1,
                     interactor,
                     len_s2,
                     disrupted_interactor_count,
+                    len(patients_protein_A_disrupts_B),
+                    patients_protein_A_disrupts_B,
+                    len(patients_protein_B_disrupts_A),
+                    patients_protein_B_disrupts_A,
+                    len(patients_intersection),
+                    patients_intersection,
                     round(mut_ex_value, 4)),
 
             )
@@ -559,11 +572,18 @@ class PatientInteractionAnalysis:
         mutual_exclusivity_data = pd.DataFrame(
             mutual_exclusivity_entries,
             columns=[
+                "TCGA",
                 "PROTEIN:GENE",
                 "NUM_PATIENTS",
                 "INTERACTOR",
                 "NUM_PATIENTS_INTERACTOR",
                 "DISRUPTIVE_INTERACTOR_COUNT",
+                "#_PATIENTS_A_DISR_B",
+                "PATIENTS_A_DISR_B",
+                "#_PATIENTS_B_DISR_A",
+                "PATIENTS_B_DISR_A",
+                "#_PATIENTS_INTERSECTION",
+                "PATIENTS_INTERSECTION",
                 "MUTUAL_EXCLUSIVITY",
             ]
         )
@@ -573,6 +593,7 @@ class PatientInteractionAnalysis:
         return mutual_exclusivity_data
 
     def get_disruptive_mutual_exclusivity_proba_data(self, protein):
+        raise DeprecationWarning("not updated as non-proba version..")
         # uses probability sums.
         gene = self.gene_id_fetcher.fetch(protein=protein)
         identifier_1_disruptive_interactors_to_values = self.get_disrupted_interactors_probabilities(
