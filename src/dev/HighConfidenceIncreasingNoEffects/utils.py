@@ -108,11 +108,6 @@ class HighConfidenceIncreasingNoEffectMutationsHelper:
 
 
 class ProveanScoreAttaching:
-    """
-    I think the simplest way of getting Provean scores from TCGA datasets
-    is using to using Predator (just data loading part, not prediction step).
-    Then I can retrieve scores from datasets one by one.
-    """
 
     def __init__(
             self,
