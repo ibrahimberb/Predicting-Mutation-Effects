@@ -24,9 +24,9 @@ log.handlers[:] = []
 log.addHandler(handler)
 log.setLevel(logging.WARNING)
 
+log.propagate = False
 
 UNIPROT_GENE_MAPPING_PATH = "../../helpers/helpers_analysis/gene_retrieval/UNIPROT_GENE_MAPPING.csv"
-
 
 # set pandas max column names unlimited
 pd.set_option('display.max_columns', None)
@@ -125,7 +125,7 @@ class CosmicResultsAttaching:
         query = cosmic_results_data[
             (cosmic_results_data["GENE"] == gene) &
             (cosmic_results_data["RESIDUE_POSITION"] == int(get_residue_position(mut)))
-        ]
+            ]
 
         if query.empty:
             query_result = {
@@ -171,9 +171,7 @@ class CosmicResultsAttaching:
 
 class ProveanScoreAttaching:
     """
-    I think the simplest way of getting Provean scores from TCGA datasets
-    is using to using Predator (just data loading part, not prediction step).
-    Then I can retrieve scores from datasets one by one.
+    It retrieves from downloaded Interface datasets (Merged_Results).
     """
 
     def __init__(
@@ -191,7 +189,7 @@ class ProveanScoreAttaching:
         )
         self.provean_attached_data = None
 
-    def attach_provean_scores(self):
+    def attach_provean_scores(self, provean_loc=9):
         retrieved_provean_scores = []
         for index, row in self.tcga_cosmic_results_data.iterrows():
             retrieved_provean_scores.append(
@@ -205,7 +203,7 @@ class ProveanScoreAttaching:
         provean_attached_data = self.tcga_cosmic_results_data.copy()
 
         provean_attached_data.insert(
-            loc=9,
+            loc=provean_loc,
             column="PROVEAN",
             value=retrieved_provean_scores,
         )
@@ -223,9 +221,27 @@ class ProveanScoreAttaching:
             (self.tcga_data_with_features["UniProt_ID"] == protein) &
             (self.tcga_data_with_features["Mutation"] == mutation) &
             (self.tcga_data_with_features["Interactor_UniProt_ID"] == interactor)
-        ].copy()
+            ].copy()
 
-        query["Provean_score"] = query["Provean_score"].astype(float)
+        try:
+            query["Provean_score"] = query["Provean_score"].astype(float)
+        except ValueError:
+            contains_only_none = list(
+                query["Provean_score"].values
+            ).count("None") == len(query["Provean_score"])
+
+            if contains_only_none:
+                log.error(
+                    f"\n{protein=}"
+                    f"\n{mutation=}"
+                    f"\n{interactor=}"
+                    f"\nIt contains None only."
+                )
+                # display(query)
+                return "N/A"
+
+            else:
+                raise
 
         if len(query) != 1:
             triplets_columns = ["UniProt_ID", "Mutation", "Interactor_UniProt_ID"]
@@ -235,10 +251,12 @@ class ProveanScoreAttaching:
                     [provean_score] = query["Provean_score"].unique()
                 except ValueError:
                     # Take average of provean scores.
-                    log.warning(f"{protein=}")
-                    log.warning(f"{mutation=}")
-                    log.warning(f"{interactor=}")
-                    log.warning(f"Took average of {query['Provean_score'].unique()}")
+                    log.warning(
+                        f"\n{protein=}"
+                        f"\n{mutation=}"
+                        f"\n{interactor=}"
+                        f"\nTook average of {query['Provean_score'].unique()}"
+                    )
                     provean_score = np.mean(query["Provean_score"].unique())
 
             else:
