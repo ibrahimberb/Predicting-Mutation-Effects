@@ -40,6 +40,7 @@ class MostFrequentlyDisruptedPartnersAdder:
         # display(protein_summary_table_highest)
         most_frequently_disrupted_partners = list(protein_summary_table_highest["PROTEIN_GENE_B"])
         most_frequently_disrupted_partners = [partner.split(":")[1] for partner in most_frequently_disrupted_partners]
+        most_frequently_disrupted_partners = sorted(set(most_frequently_disrupted_partners))
 
         # If patient count is 1 or 2, we exclude them.
         if highest_frequency <= 2:
