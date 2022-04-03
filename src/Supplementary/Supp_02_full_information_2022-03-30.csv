@@ -1,0 +1,7 @@
+TCGA,num_patients,num_original_snv_entries,num_original_snv_mutations,num_snv_data_simplified_entries,num_snv_data_simplified_mutations,num_elaspic_core_entries,num_elaspic_core_mutations,num_elaspic_core_processed_entries,num_elaspic_core_processed_mutations,num_elaspic_interface_entries,num_elaspic_interface_mutations,num_elaspic_interface_processed_triplets,num_elaspic_interface_processed_mutations,num_elaspic_core_processed_and_interface_processed_entries,num_elaspic_core_processed_and_interface_processed_mutations
+BRCA,985,120988,107352,60251,59537,20015,20012,20012,20012,7705,1742,4137,1742,24149,21754
+COAD,399,264786,222904,126470,123566,39722,39424,39424,39424,14664,3254,7816,3254,47240,42674
+ESCA,184,45313,38084,19497,19360,6210,6208,6208,6208,2425,504,1239,504,7447,6712
+GBM,392,82765,77745,46847,46456,16162,16160,16160,16160,5624,1334,3032,1334,19192,17494
+HNSC,507,102309,95497,54883,54493,17592,17590,17590,17590,7782,1592,4137,1592,21727,19182
+OV,436,75168,69132,38486,38210,12641,12611,12611,12611,5047,1093,2582,1093,15193,13704
