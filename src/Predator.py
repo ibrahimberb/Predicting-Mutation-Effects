@@ -249,15 +249,22 @@ class Predator:
         # Fill each model
         self.finalized_models.fit_all(self.data_materials, self.determined_feature_set)
 
-    def initialize_target_data_materials(self, tcga_code_path_pairs: List[Tuple[TCGA_CODE, Path]]):
+    def initialize_target_data_materials(
+            self,
+            tcga_code_path_pairs: List[Tuple[TCGA_CODE, Path]],
+            initial_columns_path=None
+    ):
 
         self.tcga_cohorts = []
         for tcga, _ in tcga_code_path_pairs:
             self.tcga_cohorts.append(tcga)
 
+        if initial_columns_path is None:
+            initial_columns_path = self.paths.initial_columns_path
+
         self.data_materials.initialize_target_datasets(
             self.paths.project_common_file_dir,
-            self.paths.initial_columns_path,
+            initial_columns_path,
             tcga_code_path_pairs
         )
 
